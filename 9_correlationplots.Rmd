@@ -1,0 +1,151 @@
+# Load in the model predictions
+```{r}
+# install.packages('readxl')
+library(readxl)
+# install.packages('PerformanceAnalytics')
+library(PerformanceAnalytics)
+library(corrplot)
+library(writexl)
+
+# LUR model predictions - previously saved in output file from LUR modelling
+# these are the predictions from the training model (i.e. the model trained on all of the data)
+ecoli_LUR1_preds <- read_xlsx("Output_files//ecoli_LUR1_preds_observed.xlsx")$predicted_ecoli_LUR1
+ecoli_LUR2_preds <- read_xlsx("Output_files//ecoli_LUR2_preds_observed.xlsx")$ecoli_LUR2_preds
+ecoli_LUR3_preds <- read_xlsx("Output_files//ecoli_LUR3_preds_observed.xlsx")$ecoli_LUR3_preds
+
+staph_LUR1_preds <- read_xlsx("Output_files//staph_LUR1_preds_observed.xlsx")$predicted_staph_LUR1
+staph_LUR2_preds <- read_xlsx("Output_files//staph_LUR2_preds_observed.xlsx")$predicted_staph_LUR2
+staph_LUR3_preds <- read_xlsx("Output_files//staph_LUR3_preds_observed.xlsx")$predicted_staph_LUR3
+
+tetw_LUR1_preds <- read_xlsx("Output_files//tetw_LUR1_preds_observed.xlsx")$predicted_tetw_LUR1
+tetw_LUR2_preds <- read_xlsx("Output_files//tetw_LUR2_preds_observed.xlsx")$predicted_tetw_LUR2
+tetw_LUR3_preds <- read_xlsx("Output_files//tetw_LUR3_preds_observed.xlsx")$predicted_tetw_LUR3
+
+meca_LUR1_preds <- read_xlsx("Output_files//meca_LUR1_preds_observed.xlsx")$predicted_meca_LUR1
+meca_LUR2_preds <- read_xlsx("Output_files//meca_LUR2_preds_observed.xlsx")$predicted_meca_LUR2
+meca_LUR3_preds <- read_xlsx("Output_files//meca_LUR3_preds_observed.xlsx")$predicted_meca_LUR3
+
+# RF model predictions - previously saved in output file from RF modelling
+# these are the predictions from the training model (i.e. the model trained on all of the data with the optimised hyperparameters)
+ecoli_rf1_preds <- read_xlsx("Output_files//ecoliRF1_500trees_preds_obs.xlsx")$Predictions_ecoliRF1_500trees
+ecoli_rf2_preds <- read_xlsx("Output_files//ecoliRF2_500trees_preds_obs.xlsx")$Predictions_ecoliRF2_500trees
+ecoli_rf3_preds <- read_xlsx("Output_files//ecoliRF3_500trees_preds_obs.xlsx")$Predictions_ecoliRF3_500trees
+
+staph_rf1_preds <- read_xlsx("Output_files//staphRF1_500trees_preds_obs.xlsx")$Predictions_staphRF1_500trees
+staph_rf2_preds <- read_xlsx("Output_files//staphRF2_500trees_preds_obs.xlsx")$Predictions_staphRF2_500trees
+staph_rf3_preds <- read_xlsx("Output_files//staphRF3_500trees_preds_obs.xlsx")$Predictions_staphRF3_500trees
+
+tetw_rf1_preds <- read_xlsx("Output_files//tetwRF1_500trees_preds_obs.xlsx")$Predictions_tetwRF1_500trees
+tetw_rf2_preds <- read_xlsx("Output_files//tetwRF2_500trees_preds_obs.xlsx")$Predictions_tetwRF2_500trees
+tetw_rf3_preds <- read_xlsx("Output_files//tetwRF3_500trees_preds_obs.xlsx")$Predictions_tetwRF3_500trees
+
+meca_rf1_preds <- read_xlsx("Output_files//mecaRF1_500trees_preds_obs.xlsx")$Predictions_mecaRF1_500trees
+meca_rf2_preds <- read_xlsx("Output_files//mecaRF2_500trees_preds_obs.xlsx")$Predictions_mecaRF2_500trees
+meca_rf3_preds <- read_xlsx("Output_files//mecaRF3_500trees_preds_obs.xlsx")$Predictions_mecaRF3_500trees
+
+# E. coli models
+# create a df from these vectors to be then used in correlation plot
+ecoli_preds_all <- data.frame(ecoli_LUR1_preds, ecoli_LUR2_preds, ecoli_LUR3_preds, ecoli_rf1_preds, ecoli_rf2_preds, ecoli_rf3_preds)
+colnames(ecoli_preds_all) <- c("E.coli LUR1","E.coli LUR2","E.coli LUR3","E.coli RF1","E.coli RF2","E.coli RF3")
+# Create correlation plot using PerformanceAnalytics package 
+chart.Correlation(ecoli_preds_all, histogram=FALSE, pch=19)
+ecoli_corr_matrix <- cor(ecoli_preds_all)
+ecoli_corr_vector <- as.vector(ecoli_corr_matrix)
+ecoli_corr_vector <- ecoli_corr_vector[ecoli_corr_vector != 1]
+mean(ecoli_corr_vector) # mean = 0.87915
+
+
+# Staph models
+staph_preds_all <- data.frame(staph_LUR1_preds, staph_LUR2_preds, staph_LUR3_preds, staph_rf1_preds, staph_rf2_preds, staph_rf3_preds)
+colnames(staph_preds_all) <- c("Staph LUR1","Staph LUR2","Staph LUR3","Staph RF1","Staph RF2","Staph RF3")
+# Create correlation plot using PerformanceAnalytics package 
+chart.Correlation(staph_preds_all, histogram=FALSE, pch=19)
+# determine the mean correlation
+staph_corr_matrix <- cor(staph_preds_all)
+staph_corr_vector <- as.vector(staph_corr_matrix)
+staph_corr_vector <- staph_corr_vector[staph_corr_vector != 1]
+mean(staph_corr_vector) # mean = 0.8123664
+
+# tetw models
+tetw_preds_all <- data.frame(tetw_LUR1_preds, tetw_LUR2_preds, tetw_LUR3_preds, tetw_rf1_preds, tetw_rf2_preds, tetw_rf3_preds)
+colnames(tetw_preds_all) <- c("tetW LUR1","tetW LUR2","tetW LUR3","tetW RF1","tetW RF2","tetW RF3")
+# Create correlation plot using PerformanceAnalytics package 
+chart.Correlation(tetw_preds_all, histogram=FALSE, pch=19)
+# determine the mean correlation
+tetw_corr_matrix <- cor(tetw_preds_all)
+tetw_corr_vector <- as.vector(tetw_corr_matrix)
+tetw_corr_vector <- tetw_corr_vector[tetw_corr_vector != 1]
+mean(tetw_corr_vector) # mean = 0.804184
+
+# meca models
+meca_preds_all <- data.frame(meca_LUR1_preds, meca_LUR2_preds, meca_LUR3_preds, meca_rf1_preds, meca_rf2_preds, meca_rf3_preds)
+colnames(meca_preds_all) <- c("mecA LUR1","mecA LUR2","mecA LUR3","mecA RF1","mecA RF2","mecA RF3")
+# Create correlation plot using PerformanceAnalytics package 
+chart.Correlation(meca_preds_all, histogram=FALSE, pch=19)
+# determine the mean correlation
+meca_corr_matrix <- cor(meca_preds_all)
+meca_corr_vector <- as.vector(meca_corr_matrix)
+meca_corr_vector <- meca_corr_vector[meca_corr_vector != 1]
+mean(meca_corr_vector) # mean = 0.8577722
+
+```
+# Correlation plot - all models together
+```{r}
+# Correlation plot for all microbial agents
+all_agents_all_models <- cbind(ecoli_preds_all,staph_preds_all, tetw_preds_all, meca_preds_all)
+# Create correlation plot using PerformanceAnalytics package 
+chart.Correlation(all_agents_all_models, histogram=FALSE, pch=19, cex.labels=0.2)
+
+# Calculate the correlation  
+cor_matrix <- cor(all_agents_all_models)
+round(cor_matrix, digits = 3)
+cor_df <- as.data.frame(cor_matrix)
+cor_df$RowNames <- row.names(cor_matrix)
+write_xlsx(cor_df, "Output_files//cor_matrix.xlsx", col_names= TRUE)
+
+
+# Create a blank matrix for significance asterisks
+significance_matrix <- matrix("", ncol = ncol(all_agents_all_models), nrow = ncol(all_agents_all_models))
+
+# Calculate p-values for each correlation coefficient
+for (i in 1:(ncol(all_agents_all_models) - 1)) {
+  for (j in (i + 1):ncol(all_agents_all_models)) {
+    cor_test <- cor.test(all_agents_all_models[, i], all_agents_all_models[, j])
+    if (cor_test$p.value < 0.001) {
+      significance_matrix[i, j] <- "***"
+      significance_matrix[j, i] <- "***"
+    } else if (cor_test$p.value < 0.01) {
+      significance_matrix[i, j] <- "**"
+      significance_matrix[j, i] <- "**"
+    } else if (cor_test$p.value < 0.05) {
+      significance_matrix[i, j] <- "*"
+      significance_matrix[j, i] <- "*"
+    }
+  }
+}
+
+# Create a correlation plot using corrplot
+corrplot(cor_matrix, method = "number", type = "upper", tl.col = "black",
+         tl.srt = 90, tl.pos = "lt",tl.cex=0.7, col = colorRampPalette(c("red","white", "darkblue"))(200), p.mat = significance_matrix, sig.level = c(0.05, 0.01, 0.001), insig = "blank", number.cex = 0.4, reorder = "none")
+```
+
+# Correlation plot - level 2 models
+```{r}
+# Correlation plot for just LUR2 and RF2 models
+ecoli_level2_models <- data.frame(ecoli_LUR2_preds, ecoli_rf2_preds)
+colnames(ecoli_level2_models) <- c("E. coli LUR2","E. coli RF2")
+staph_level2_models <- data.frame(staph_LUR2_preds, staph_rf2_preds)
+colnames(staph_level2_models) <- c("Staph LUR2","Staph RF2")
+tetw_level2_models <- data.frame(tetw_LUR2_preds, tetw_rf2_preds)
+colnames(tetw_level2_models) <- c("tetW LUR2","tetW RF2")
+meca_level2_models <- data.frame(meca_LUR2_preds, meca_rf2_preds)
+colnames(meca_level2_models) <- c("mecA LUR2","mecA RF2")
+
+all_agents_level2_models <- cbind(ecoli_level2_models,staph_level2_models, tetw_level2_models, meca_level2_models)
+
+# Create correlation plot using PerformanceAnalytics package 
+chart.Correlation(all_agents_level2_models, histogram=FALSE, pch=19)
+
+R.version
+```
+
