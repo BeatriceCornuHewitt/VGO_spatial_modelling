@@ -1,0 +1,233 @@
+# Model diagnostics 
+# We see a large drop in R-squared from the training models to 10-fold CV models
+# Also explored LOOCV
+```{r}
+library(readxl)
+# I previously created xls spreadsheets with the training, LOOCV and 10-fold CV predictions
+# Training model predictions
+#LUR1
+ecoli_LUR1_preds_observed<-read_xlsx("Output_files//ecoli_LUR1_preds_observed.xlsx")
+staph_LUR1_preds_observed<-read_xlsx("Output_files//staph_LUR1_preds_observed.xlsx")
+tetw_LUR1_preds_observed<-read_xlsx("Output_files//tetw_LUR1_preds_observed.xlsx")
+meca_LUR1_preds_observed<-read_xlsx("Output_files//meca_LUR1_preds_observed.xlsx")
+
+#LUR2
+ecoli_LUR2_preds_observed<-read_xlsx("Output_files//ecoli_LUR2_preds_observed.xlsx")
+staph_LUR2_preds_observed<-read_xlsx("Output_files//staph_LUR2_preds_observed.xlsx")
+tetw_LUR2_preds_observed<-read_xlsx("Output_files//tetw_LUR2_preds_observed.xlsx")
+meca_LUR2_preds_observed<-read_xlsx("Output_files//meca_LUR2_preds_observed.xlsx")
+
+#LUR3
+ecoli_LUR3_preds_observed<-read_xlsx("Output_files//ecoli_LUR3_preds_observed.xlsx")
+staph_LUR3_preds_observed<-read_xlsx("Output_files//staph_LUR3_preds_observed.xlsx")
+tetw_LUR3_preds_observed<-read_xlsx("Output_files//tetw_LUR3_preds_observed.xlsx")
+meca_LUR3_preds_observed<-read_xlsx("Output_files//meca_LUR3_preds_observed.xlsx")
+
+
+# LOOCV model predictions
+#LUR1
+ecoli_LUR1_LOOCV_preds_observed<-read_xlsx("Output_files//ecoli_LUR1_LOOCV_preds_observed.xlsx")
+staph_LUR1_LOOCV_preds_observed<-read_xlsx("Output_files//staph_LUR1_LOOCV_preds_observed.xlsx")
+tetw_LUR1_LOOCV_preds_observed<-read_xlsx("Output_files//tetw_LUR1_LOOCV_preds_observed.xlsx")
+meca_LUR1_LOOCV_preds_observed<-read_xlsx("Output_files//meca_LUR1_LOOCV_preds_observed.xlsx")
+
+#LUR2
+ecoli_LUR2_LOOCV_preds_observed<-read_xlsx("Output_files//ecoli_LUR2_LOOCV_preds_observed.xlsx")
+staph_LUR2_LOOCV_preds_observed<-read_xlsx("Output_files//staph_LUR2_LOOCV_preds_observed.xlsx")
+tetw_LUR2_LOOCV_preds_observed<-read_xlsx("Output_files//tetw_LUR2_LOOCV_preds_observed.xlsx")
+meca_LUR2_LOOCV_preds_observed<-read_xlsx("Output_files//meca_LUR2_LOOCV_preds_observed.xlsx")
+
+#LUR3
+ecoli_LUR3_LOOCV_preds_observed<-read_xlsx("Output_files//ecoli_LUR3_LOOCV_preds_observed.xlsx")
+staph_LUR3_LOOCV_preds_observed<-read_xlsx("Output_files//staph_LUR3_LOOCV_preds_observed.xlsx")
+tetw_LUR3_LOOCV_preds_observed<-read_xlsx("Output_files//tetw_LUR3_LOOCV_preds_observed.xlsx")
+meca_LUR3_LOOCV_preds_observed<-read_xlsx("Output_files//meca_LUR3_LOOCV_preds_observed.xlsx")
+
+# 10-fold CV predictions
+# LUR1 
+ecoli_LUR1_10foldCV_observed_predicted<-read_xlsx("Output_files//ecoli_LUR1_10foldCV_observed_predicted.xlsx")
+staph_LUR1_10foldCV_observed_predicted<-read_xlsx("Output_files//staph_LUR1_10foldCV_observed_predicted.xlsx")
+tetw_LUR1_10foldCV_observed_predicted<-read_xlsx("Output_files//tetw_LUR1_10foldCV_observed_predicted.xlsx")
+meca_LUR1_10foldCV_observed_predicted<-read_xlsx("Output_files//meca_LUR1_10foldCV_observed_predicted.xlsx")
+
+#LUR2 
+ecoli_LUR2_10foldCV_observed_predicted<-read_xlsx("Output_files//ecoli_LUR2_10foldCV_observed_predicted.xlsx")
+staph_LUR2_10foldCV_observed_predicted<-read_xlsx("Output_files//staph_LUR2_10foldCV_observed_predicted.xlsx")
+tetw_LUR2_10foldCV_observed_predicted<-read_xlsx("Output_files//tetw_LUR2_10foldCV_observed_predicted.xlsx")
+meca_LUR2_10foldCV_observed_predicted<-read_xlsx("Output_files//meca_LUR2_10foldCV_observed_predicted.xlsx")
+
+#LUR3
+ecoli_LUR3_10foldCV_observed_predicted<-read_xlsx("Output_files//ecoli_LUR3_10foldCV_observed_predicted.xlsx")
+staph_LUR3_10foldCV_observed_predicted<-read_xlsx("Output_files//staph_LUR3_10foldCV_observed_predicted.xlsx")
+tetw_LUR3_10foldCV_observed_predicted<-read_xlsx("Output_files//tetw_LUR3_10foldCV_observed_predicted.xlsx")
+meca_LUR3_10foldCV_observed_predicted<-read_xlsx("Output_files//meca_LUR3_10foldCV_observed_predicted.xlsx")
+```
+# E. coli: training vs LOOCV predictions
+```{r}
+# Training model predictions vs LOOCV predictions (useful visualization to help diagnose the drop in R-squared from training to cross-validation)
+# Create a prediction comparison plot - this allows me to compare the predicted values from the training and cross-validation sets. If the model is overfitting, you might expect to see a larger spread or a systematic bias in the training predictions compared to the cross-validation predictions. 
+# On the other hand, if the model is well-calibrated and not overfitting, you would expect the predictions from both the training and cross-validation sets to be similar and to cluster around the diagonal line.
+# Additionally, you can calculate the correlation coefficient between the training and cross-validation predictions to quantify the level of agreement between the two sets. A high correlation coefficient indicates that the model's predictions are consistent between the training and cross-validation sets, while a low correlation coefficient suggests that the model is overfitting to the training set. In summary, plotting the training model predictions against the 10-fold CV predictions can provide further insight into the behavior of the model and help diagnose overfitting.
+# Calculate correlation coefficients between training and LOOCV predictions
+corr_train_LOOCV_ecoli_LUR1 <- cor(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1, ecoli_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.E.coli_LUR1_LOOCV_PRED)
+corr_train_LOOCV_ecoli_LUR2 <- cor(ecoli_LUR2_preds_observed$ecoli_LUR2_preds, ecoli_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.E.coli_LUR2_LOOCV_PRED)
+corr_train_LOOCV_ecoli_LUR3 <- cor(ecoli_LUR2_preds_observed$ecoli_LUR2_preds, ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED)
+
+{plot(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1, ecoli_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.E.coli_LUR1_LOOCV_PRED,
+     main = "LUR1: Training model-predicted E. coli concentrations vs. LOOCV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR1 training model)", 
+     ylab = "Predicted E. coli (LUR1 LOOCV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1 ~ ecoli_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.E.coli_LUR1_LOOCV_PRED))
+text(x = mean(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1), y = min(ecoli_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.E.coli_LUR1_LOOCV_PRED), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_ecoli_LUR1, 4)),col = "blue" )
+}
+
+{plot(ecoli_LUR2_preds_observed$ecoli_LUR2_preds, ecoli_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.E.coli_LUR2_LOOCV_PRED,
+     main = "LUR2: Training model-predicted E. coli concentrations vs. LOOCV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR2 training model)", 
+     ylab = "Predicted E. coli (LUR2 LOOCV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR2_preds_observed$ecoli_LUR2_preds ~ ecoli_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.E.coli_LUR2_LOOCV_PRED))
+text(x = mean(ecoli_LUR2_preds_observed$ecoli_LUR2_preds), y = min(ecoli_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.E.coli_LUR2_LOOCV_PRED), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_ecoli_LUR2, 4)),col = "blue" )
+}
+
+{plot(ecoli_LUR3_preds_observed$ecoli_LUR3_preds, ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED,
+     main = "LUR3: Training model-predicted E. coli concentrations vs. LOOCV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR3 training model)", 
+     ylab = "Predicted E. coli (LUR3 LOOCV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR3_preds_observed$ecoli_LUR3_preds ~ ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED))
+text(x = mean(ecoli_LUR3_preds_observed$ecoli_LUR3_preds,y = min(ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_ecoli_LUR3, 4)),col = "blue")
+}
+{plot(ecoli_LUR3_preds_observed$ecoli_LUR3_preds, ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED,
+     main = "LUR3: Training model-predicted E. coli concentrations vs. LOOCV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR3 training model)", 
+     ylab = "Predicted E. coli (LUR3 LOOCV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR3_preds_observed$ecoli_LUR3_preds ~ ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED))
+text(x = mean(ecoli_LUR3_preds_observed$ecoli_LUR3_preds), y = min(ecoli_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.E.coli_LUR3_LOOCV_PRED), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_ecoli_LUR3, 4)),col = "blue" )
+}
+```
+# Staph: training vs LOOCV predictions
+```{r}
+corr_train_LOOCV_staph_LUR1 <- cor(staph_LUR1_preds_observed$predicted_staph_LUR1, staph_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.staph_LUR1_LOOCV_PRED)
+corr_train_LOOCV_staph_LUR2 <- cor(staph_LUR2_preds_observed$predicted_staph_LUR2, staph_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.staph_LUR2_LOOCV_PRED)
+corr_train_LOOCV_staph_LUR3 <- cor(staph_LUR2_preds_observed$predicted_staph_LUR2, staph_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.Staph_LUR3_LOOCV_preds)
+
+{plot(staph_LUR1_preds_observed$predicted_staph_LUR1, staph_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.staph_LUR1_LOOCV_PRED,
+      main = "LUR1: Training model-predicted staph concentrations vs. LOOCV-predicted concentrations", 
+      xlab = "Predicted staph (LUR1 training model)", 
+      ylab = "Predicted staph (LUR1 LOOCV models)",
+      cex.main = 0.9) 
+  abline(lm(staph_LUR1_preds_observed$predicted_staph_LUR1 ~ staph_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.staph_LUR1_LOOCV_PRED))
+  text(x = mean(staph_LUR1_preds_observed$predicted_staph_LUR1), y = min(staph_LUR1_LOOCV_preds_observed$Measurements_livestockpreds_LUR1_LOOCV.staph_LUR1_LOOCV_PRED), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_staph_LUR1, 4)),col = "blue" )
+}
+
+{plot(staph_LUR2_preds_observed$predicted_staph_LUR2, staph_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.staph_LUR2_LOOCV_PRED,
+      main = "LUR2: Training model-predicted staph concentrations vs. LOOCV-predicted concentrations", 
+      xlab = "Predicted staph (LUR2 training model)", 
+      ylab = "Predicted staph (LUR2 LOOCV models)",
+      cex.main = 0.9) 
+  abline(lm(staph_LUR2_preds_observed$predicted_staph_LUR2 ~ staph_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.staph_LUR2_LOOCV_PRED))
+  text(x = mean(staph_LUR2_preds_observed$predicted_staph_LUR2), y = min(staph_LUR2_LOOCV_preds_observed$Measurements_livestockpreds_LUR2_LOOCV.staph_LUR2_LOOCV_PRED), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_staph_LUR2, 4)),col = "blue" )
+}
+
+{plot(staph_LUR3_preds_observed$predicted_staph_LUR3, staph_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.Staph_LUR3_LOOCV_preds,
+      main = "LUR3: Training model-predicted staph concentrations vs. LOOCV-predicted concentrations", 
+      xlab = "Predicted staph (LUR3 training model)", 
+      ylab = "Predicted staph (LUR3 LOOCV models)",
+      cex.main = 0.9) 
+  abline(lm(staph_LUR3_preds_observed$predicted_staph_LUR3 ~ staph_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.Staph_LUR3_LOOCV_preds))
+  text(x = mean(staph_LUR3_preds_observed$predicted_staph_LUR3), y = min(staph_LUR3_LOOCV_preds_observed$Measurements_livestockpreds_LUR3_LOOCV.Staph_LUR3_LOOCV_preds), labels = paste("Correlation coefficient:", round(corr_train_LOOCV_staph_LUR3, 4)),col = "blue" )
+}
+```
+
+# E. coli: training vs 10-fold predictions
+```{r}
+# Calculate correlation coefficients between training and LOOCV predictions
+# Since the 10-fold CV dataframe isn't in the same order as the training and LOOCV results, I need to reorder these dataframes (by ascending order of the LocID)
+# Order the rows of the data frame by the values in Loc_ID column in ascending order
+ecoli_LUR1_10foldCV_observed_predicted_ordered <- ecoli_LUR1_10foldCV_observed_predicted[order(ecoli_LUR1_10foldCV_observed_predicted$VGOB1_subsetvalID1to10_ecoli_LUR1_ecoli_10foldCV.Loc_ID), ]
+ecoli_LUR2_10foldCV_observed_predicted_ordered <- ecoli_LUR2_10foldCV_observed_predicted[order(ecoli_LUR2_10foldCV_observed_predicted$VGOB1_subsetvalID1to10_ecoli_LUR2_10foldCV.Loc_ID), ]
+ecoli_LUR3_10foldCV_observed_predicted_ordered <- ecoli_LUR3_10foldCV_observed_predicted[order(ecoli_LUR3_10foldCV_observed_predicted$VGOB1_subsetvalID1to10_ecoli_LUR3_10foldCV.Loc_ID), ]
+
+corr_train_10foldCV_ecoli_LUR1 <- cor(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1, ecoli_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR1_ecoli_10foldCV.ecoli_PRED_HV)
+corr_train_10foldCV_ecoli_LUR2 <- cor(ecoli_LUR2_preds_observed$ecoli_LUR2_preds, ecoli_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR2_10foldCV.ecoli_PRED_HV)
+corr_train_10foldCV_ecoli_LUR3 <- cor(ecoli_LUR3_preds_observed$ecoli_LUR3_preds, ecoli_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR3_10foldCV.ecoli_PRED_HV)
+
+{plot(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1, ecoli_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR1_ecoli_10foldCV.ecoli_PRED_HV,
+     main = "LUR1: Training model-predicted E. coli concentrations vs. 10-fold CV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR1 training model)", 
+     ylab = "Predicted E. coli (LUR1 10-fold CV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1 ~ ecoli_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR1_ecoli_10foldCV.ecoli_PRED_HV))
+text(x = mean(ecoli_LUR1_preds_observed$predicted_ecoli_LUR1), y = min(ecoli_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR1_ecoli_10foldCV.ecoli_PRED_HV), labels = paste("Correlation coefficient:", round(corr_train_10foldCV_ecoli_LUR1, 4)),col = "blue" )
+}
+
+{plot(ecoli_LUR2_preds_observed$ecoli_LUR2_preds , ecoli_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR2_10foldCV.ecoli_PRED_HV,
+     main = "LUR2: Training model-predicted E. coli concentrations vs. 10-fold CV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR2 training model)", 
+     ylab = "Predicted E. coli (LUR2 10-fold CV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR2_preds_observed$ecoli_LUR2_preds ~ ecoli_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR2_10foldCV.ecoli_PRED_HV))
+text(x = mean(ecoli_LUR2_preds_observed$ecoli_LUR2_preds), y = min(ecoli_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR2_10foldCV.ecoli_PRED_HV), labels = paste("Correlation coefficient:", round(corr_train_10foldCV_ecoli_LUR2, 4)),col = "blue" )
+}
+
+{plot(ecoli_LUR3_preds_observed$ecoli_LUR3_preds, ecoli_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR3_10foldCV.ecoli_PRED_HV,
+     main = "LUR3: Training model-predicted E. coli concentrations vs. 10-fold CV-predicted concentrations", 
+     xlab = "Predicted E. coli (LUR3 training model)", 
+     ylab = "Predicted E. coli (LUR3 10-fold CV models)",
+     cex.main = 0.9) 
+abline(lm(ecoli_LUR3_preds_observed$ecoli_LUR3_preds ~ ecoli_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR3_10foldCV.ecoli_PRED_HV))
+text(x = mean(ecoli_LUR3_preds_observed$ecoli_LUR3_preds), y = min(ecoli_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_ecoli_LUR3_10foldCV.ecoli_PRED_HV), labels = paste("Correlation coefficient:", round(corr_train_10foldCV_ecoli_LUR3, 4)),col = "blue" )
+}
+```
+# Staph: training vs 10-fold predictions
+```{r}
+# Calculate correlation coefficients between training and LOOCV predictions
+# Since the 10-fold CV dataframe isn't in the same order as the training and LOOCV results, I need to reorder these dataframes (by ascending order of the LocID)
+# Order the rows of the data frame by the values in Loc_ID column in ascending order
+staph_LUR1_10foldCV_observed_predicted_ordered <- staph_LUR1_10foldCV_observed_predicted[order(staph_LUR1_10foldCV_observed_predicted$VGOB1_subsetvalID1to10_staph_LUR1_10foldCV.Loc_ID), ]
+staph_LUR2_10foldCV_observed_predicted_ordered <- staph_LUR2_10foldCV_observed_predicted[order(staph_LUR2_10foldCV_observed_predicted$VGOB1_subsetvalID1to10_staph_LUR2_10foldCV.Loc_ID), ]
+staph_LUR3_10foldCV_observed_predicted_ordered <- staph_LUR3_10foldCV_observed_predicted[order(staph_LUR3_10foldCV_observed_predicted$VGOB1_subsetvalID1to10_staph_LUR3_10foldCV.Loc_ID), ]
+
+corr_train_10foldCV_staph_LUR1 <- cor(staph_LUR1_preds_observed$predicted_staph_LUR1, staph_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR1_10foldCV.staph_PRED_HV)
+corr_train_10foldCV_staph_LUR2 <- cor(staph_LUR2_preds_observed$predicted_staph_LUR2, staph_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR2_10foldCV.staph_PRED_HV)
+corr_train_10foldCV_staph_LUR3 <- cor(staph_LUR3_preds_observed$predicted_staph_LUR3, staph_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR3_10foldCV.staph_PRED_HV)
+
+
+{plot(staph_LUR1_preds_observed$predicted_staph_LUR1, staph_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR1_10foldCV.staph_PRED_HV,
+      main = "LUR1: Training model-predicted Staph concentrations vs. 10-fold CV-predicted concentrations", 
+      xlab = "Predicted Staph (LUR1 training model)", 
+      ylab = "Predicted Staph (LUR1 10-fold CV models)",
+      cex.main = 0.9) 
+  abline(lm(staph_LUR1_preds_observed$predicted_staph_LUR1 ~ staph_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR1_10foldCV.staph_PRED_HV))
+  text(x = mean(staph_LUR1_preds_observed$predicted_staph_LUR1), y = min(staph_LUR1_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR1_10foldCV.staph_PRED_HV), labels = paste("Correlation coefficient:", round(corr_train_10foldCV_staph_LUR1, 4)),col = "blue" )
+}
+
+{plot(staph_LUR2_preds_observed$predicted_staph_LUR2, staph_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR2_10foldCV.staph_PRED_HV,
+      main = "LUR2: Training model-predicted Staph concentrations vs. 10-fold CV-predicted concentrations", 
+      xlab = "Predicted Staph (LUR2 training model)", 
+      ylab = "Predicted Staph (LUR2 10-fold CV models)",
+      cex.main = 0.9) 
+  abline(lm(staph_LUR2_preds_observed$predicted_staph_LUR2 ~ staph_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR2_10foldCV.staph_PRED_HV))
+  text(x = mean(staph_LUR2_preds_observed$predicted_staph_LUR2), y = min(staph_LUR2_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR2_10foldCV.staph_PRED_HV), labels = paste("Correlation coefficient:", round(corr_train_10foldCV_staph_LUR2, 4)),col = "blue" )
+}
+
+{plot(staph_LUR3_preds_observed$predicted_staph_LUR3, staph_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR3_10foldCV.staph_PRED_HV,
+      main = "LUR3: Training model-predicted Staph concentrations vs. 10-fold CV-predicted concentrations", 
+      xlab = "Predicted Staph (LUR3 training model)", 
+      ylab = "Predicted Staph (LUR3 10-fold CV models)",
+      cex.main = 0.9) 
+  abline(lm(staph_LUR3_preds_observed$predicted_staph_LUR3 ~ staph_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR3_10foldCV.staph_PRED_HV))
+  text(x = mean(staph_LUR3_preds_observed$predicted_staph_LUR3), y = min(staph_LUR3_10foldCV_observed_predicted_ordered$VGOB1_subsetvalID1to10_staph_LUR3_10foldCV.staph_PRED_HV), labels = paste("Correlation coefficient:", round(corr_train_10foldCV_staph_LUR3, 4)),col = "blue" )
+}
+
+```
+# Correlations between predictions from the different modelling methods
+```{r}
+
+```
+
+
+
