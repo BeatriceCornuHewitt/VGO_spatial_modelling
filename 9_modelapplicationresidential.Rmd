@@ -1,0 +1,998 @@
+# Applying the LUR models - SLR model 3 
+```{r}
+# Following meeting on 21/01/2022 with MdR she said that I can't scale both the variables for the LUR model and for the participant livestock characteristics in the same way. Each livestock predictor variable is scaled to the overall 10th-90th percentile of the overall predictor distribution, therefore if I do scaling of the participant livestock variables, these 10th and 90th percentiles will be different and therefore not comparable. MdR suggested that instead, I build the LUR models on the un-scaled (but winsorised) livestock predictors and then apply the LUR model to the non-scaled, non-winsorised participant livestock variables.
+# PS object which I need to add metadata to
+setwd("C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\ResCap\\ResCap_2020_v4_rarefied")
+getwd()
+readRDS("C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\ResCap\\ResCap_2020_v4_rarefied\\Final.ps.noblanks.rds")
+Final.ps.noblanks
+# Current meta data in this ps object
+Final.ps.noblanks@sam_data
+# Read in the FULL exposure data from MdR
+full.livestock.exp.df <- read.csv("VGOcopdcaco_resistome_Livestpred_all_forBea.csv", header=TRUE, row.names='respnr')
+# Remove the randomly added column 'X' from the dataframe 
+full.livestock.exp.df <- subset (full.livestock.exp.df, select = -X)
+# Remove blanks from the dataframe 
+full.livestock.exp.df.noblanks <- full.livestock.exp.df[-(70:72),]
+full.livestock.exp.df.noblanks.df <- as.data.frame(full.livestock.exp.df.noblanks)
+
+# Since I built the LUR models on the winsorised and scaled predictor data, I am questioning how I should process the participant livestock proxy data. 
+# The reason that the livestock data was winsorised in the first place before building the LUR model was to account for the right-skewed distribution amongst the monitoring sites, so I am not convinced that I need to now do this with the participant data. However I am thinking that the 10-90 scaling is necessary for all predictors as otherwise the LUR model components will not be on the same scale as the participant livestock data – asked MdR on 18/01/2022. 
+# I will start by just scaling the predictors and not winsorising (code written for winsorising but not to use at the moment before discussing with MdR)
+# I noticed that there are more livestock predictors in this s/s from MdR than the previous one used to build the LUR models - this is because the previous one only included variables that had at least 20 non-zero values 
+# 208 variables in this new df but this doesn't matter
+# Check which variables are in this df 
+names(full.livestock.exp.df.noblanks.df)
+
+# copy over original ps object 
+Final.ps.noblanks.full.exp <- Final.ps.noblanks
+sample_data(Final.ps.noblanks.full.exp)
+Final.ps.noblanks@sam_data$copdcaco
+# Replace the current sample data that is in this PS object 
+full.livestock.exp.sam.data <- as.data.frame(sample_data(full.livestock.exp.df.noblanks.df))
+full.livestock.exp.sam.data$copdcaco <- Final.ps.noblanks@sam_data$copdcaco # still want to keep the copdcaco status from the old PS object and have in the new one. 
+sample_data(Final.ps.noblanks.full.exp) <- full.livestock.exp.sam.data
+Final.ps.noblanks.full.exp@sam_data # now the full livestock exposure data has been added to the PS object's sample data in addition to copd status (copdcaco) (209 total columns of sample data - the 208 (raw (non-scaled/winsorised)) livestock exposure proxies and copd status).  
+
+
+# Using the supervised stepwise LUR modelling approach
+# model 3 (all variables included (general livestock characteristics, species-specific and farm type-specific predictors) for each microbial marker is used
+# This is the model derived for E.coli 
+ecoli_LUR3_algorithmmodel <- lm(ecoli~nPigMultipFarmWghtDist.3000m.sum.95Win.10to90scaled+ npoultry.3000m.95Win.10to90scaled+ npigletsWghtDist.2000m.sum.95Win.10to90scaled+ notherpoultryanim.3000m.95Win.10to90scaled+ HorseFarm.3000m.95Win.10to90scaled, data= VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3) 
+summary(ecoli_LUR3_algorithmmodel)
+
+# This is the model for staph
+staph_LUR3_algorithmmethod <- lm(staph_copiespm3.ln.diffmeth.mean~ PoultryFarm.3000m.95Win.10to90scaled+ nhorses.1000m.95Win.10to90scaled + nsowsWghtDist.1000m.sum.95Win.10to90scaled, data = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9)
+summary(staph_LUR3_algorithmmethod)
+
+# This is the model for tetW
+tetW_LUR3_algorithmmethod <- lm(tetw_copiespm3.ln.diffmeth.mean ~ nPigMultipFarmWghtDist.3000m.sum.95Win.10to90scaled+ npoultryWghtDist.3000m.sum.95Win.10to90scaled+ nhorses.3000m.95Win.10to90scaled, data = All_vars_LUR_model_3)
+summary(tetW_LUR3_algorithmmethod)
+
+# This is the model for mecA
+mecA_LUR3_algorithmmethod <- lm(meca_copiespm3.ln.diffmeth.mean ~ npoultryWghtDist.3000m.sum.95Win.10to90scaled+ nPigMultipFarmWghtDist.3000m.sum.95Win.10to90scaled+ nhorses.3000m.95Win.10to90scaled, data = All_vars_LUR_model_3)
+summary(mecA_LUR3_algorithmmethod)
+
+#HOWEVER all of these above models are built using the winsorised and scaled predictor variables, but in order to apply the LUR models to the participant data, these models should be run on the non scaled predictors
+# I will do this now. The models will be the same if using scaled or non-scaled predictors but I will now run with these non-scaled predictors. 
+# Previous code to winsorise the predictor variables
+
+# load in data 
+# Read in the E.coli, staph, tetW and mecA measurements (temporal variation adjusted, and averaged per site)
+VGOB1_BioA_SiteAv <- read.csv("C:/Users/beaco/iCloudDrive/Documents/Utrecht/Epidemiology MSc 2020/Research Project_/VGOB1_exposure_measurements/Data_BioA_concentrations/VGOB1_BioA_SiteAv.csv")
+names(VGOB1_BioA_SiteAv)
+# remove column labelled 'x' so that the first column is now the location ID
+VGOB1_BioA_SiteAv$X <- NULL
+# Read in the exposure variables. Each predictor in this csv file has at least 20 non-zeros
+VGOB1_ExpoV_Adj_KeptN20_corrected <- read.csv("C:/Users/beaco/iCloudDrive/Documents/Utrecht/Epidemiology MSc 2020/Research Project_/VGOB1_exposure_measurements/Data_BioA_concentrations/VGOB1_ExpoV_Adj_KeptN20_Tr_1P9_new.csv")
+names(VGOB1_ExpoV_Adj_KeptN20_corrected )
+
+# Make all negative values positive
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization <- VGOB1_ExpoV_Adj_KeptN20_corrected
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPigs15.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPigs15.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPoultry250.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPoultry250.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistCows5.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistCows5.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistHorses5.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistHorses5.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistGoats50.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistGoats50.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistSheep50.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistSheep50.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistFuranims250.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistFuranims250.NEG * -1 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MinDistAnyFarm.NEG <- VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MinDistAnyFarm.NEG * -1 
+
+# un-invert the inversed predictors 
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPigs15.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPigs15.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPoultry250.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistPoultry250.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistCows5.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistCows5.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistHorses5.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistHorses5.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistGoats50.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistGoats50.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistSheep50.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistSheep50.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistFuranims250.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MindistFuranims250.INV)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MinDistAnyFarm.INV <- 1/(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$MinDistAnyFarm.INV)
+
+# Inspect the new dataframe
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization
+# remove column labelled 'x' so that the first column is now the location ID
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization$X <- NULL
+
+# Now winsorize the data in all the columns (to the 95th percentile) 
+names(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization)
+VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization_add <- apply(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization[,2:140],2,function(x){pmin(x,quantile(x,0.95,na.rm=TRUE))})
+colnames(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization_add) <- paste0(colnames(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization[,2:140]),".95Win")
+summary(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization_add)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl <- cbind(VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization,VGOB1_ExpoV_Adj_KeptN20_corrected_forwinsorization_add)
+summary(VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl)
+names(VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl) # variables have been winsorised and added as extra variables, columns 2 - 140 are the non-winsorised variables and 141-279 are winsorised
+
+# Now I need to make the negative variables negative again and inverse the inversed ones - I will only modify the winsorized variables as I no longer need the non-winsorized ones 
+# Negate all .NEG (winsorized) predictors again 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistPigs15.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistPigs15.NEG.95Win * -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistPoultry250.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistPoultry250.NEG.95Win * -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistCows5.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistCows5.NEG.95Win * -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistHorses5.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistHorses5.NEG.95Win* -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistGoats50.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistGoats50.NEG.95Win * -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistSheep50.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistSheep50.NEG.95Win * -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistFuranims250.NEG.95Win <- VGOB1_ExpoV_Adj_KeptN20_95Win$MindistFuranims250.NEG.95Win * -1 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MinDistAnyFarm.NEG.95Win<- VGOB1_ExpoV_Adj_KeptN20_95Win$MinDistAnyFarm.NEG.95Win * -1 
+
+# Inverse the .INV (winsorized) predictors again
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistPigs15.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistPigs15.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistPoultry250.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistPoultry250.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistCows5.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistCows5.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistHorses5.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistHorses5.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistGoats50.INV.95Win<- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistGoats50.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistSheep50.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistSheep50.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MindistFuranims250.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MindistFuranims250.INV.95Win)
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl$MinDistAnyFarm.INV.95Win <- 1/(VGOB1_ExpoV_Adj_KeptN20_95Win$MinDistAnyFarm.INV.95Win)
+
+# Inspect the new df 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl
+# This df now has each crude variable (note not negative or inversed despite the names- i need to re-do this to negate and inverse these predictors where necessary), all variables also have a non-winsorized version and winsorised version (total 279 variables (139 non-winsorised, 139 winsorised) - no scaling done now. 
+
+# Now I will exclude all variables which are not winsorized from the df 
+VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl <- subset(VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl[c(1,141:279)])
+VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl # This dataset only contains exposure variables which are winsorised
+rownames(VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl)<- NULL # remove the rownames of the dataframe so that the first column is now the location ID
+
+# Merge microbial measurement file with the predictor variable file
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl <- merge(VGOB1_BioA_SiteAv, VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl, by="Loc_ID", all=TRUE)
+str(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, list.len=ncol(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)) # check the type of variable for each column in the new data
+
+# Save the R dataframe as an excel file
+library("writexl")
+write_xlsx(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, "C:\\Users\\beaco\\iCloudDrive\\Documents\\Utrecht\\Epidemiology MSc 2020\\Research Project_\\LUR_models\\Applying the LUR models\\Sitemeasurementsandexppredictors_95wins_forLURapplication.xlsx")
+
+# Now that the predictors are only winsorised (not scaled), I can run the LUR models again
+# Be careful to change the ending of each of the variables 
+# This is the model derived for E.coli (non-scaled predictor variables)
+ecoli_LUR3_algorithmmodel.95wins.noscaling <- lm(ecoli_copiespm3.ln.diffmeth.mean~nPigMultipFarmWghtDist.3000m.sum.95Win+ npoultry.3000m.95Win+ npigletsWghtDist.1000m.sum.95Win+ notherpoultryanim.3000m.95Win+ HorseFarm.3000m.95Win, data= VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl) 
+summary(ecoli_LUR3_algorithmmodel.95wins.noscaling)
+summary(ecoli_LUR3_algorithmmodel)# compare to old model with 10-90th percentile scaling of the predictor variables - the beta coefficients are the same but the p-values are different
+
+# This is the model for staph
+staph_LUR3_algorithmmethod.95wins.noscaling <- lm(staph_copiespm3.ln.diffmeth.mean~ PoultryFarm.3000m.95Win+ nhorses.1000m.95Win + nsowsWghtDist.1000m.sum.95Win, data = VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+summary(staph_LUR3_algorithmmethod.95wins.noscaling)
+summary(staph_LUR3_algorithmmethod)# compare to old model with 10-90th percentile scaling of the predictor variables
+
+# This is the model for tetW
+tetW_LUR3_algorithmmethod.95wins.noscaling <- lm(tetw_copiespm3.ln.diffmeth.mean ~ nPigMultipFarmWghtDist.3000m.sum.95Win+ npoultryWghtDist.3000m.sum.95Win+ nhorses.3000m.95Win, data = VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+summary(tetW_LUR3_algorithmmethod.95wins.noscaling)
+summary(tetW_LUR3_algorithmmethod)# compare to old model with 10-90th percentile scaling of the predictor variables
+
+# This is the model for mecA
+mecA_LUR3_algorithmmethod.95wins.noscaling <- lm(meca_copiespm3.ln.diffmeth.mean ~ npoultryWghtDist.3000m.sum.95Win+ nPigMultipFarmWghtDist.3000m.sum.95Win+ nhorses.3000m.95Win, data = VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+summary(mecA_LUR3_algorithmmethod.95wins.noscaling)
+summary(mecA_LUR3_algorithmmethod)# compare to old model with 10-90th percentile scaling of the predictor variables
+
+# In order to apply the LUR models above to the participant livestock exposure data, the names of the livestock exposures must be the same, therefore I will add ".95Win" to the names of each of the predictors (note that these variables are not actually winsorised)
+Final.ps.noblanks.full.exp@sam_data
+colnames(Final.ps.noblanks.full.exp@sam_data) <- paste0(colnames(Final.ps.noblanks.full.exp@sam_data[,1:208]),".95Win")
+Final.ps.noblanks.full.exp@sam_data$copdcaco <- Final.ps.noblanks@sam_data$copdcaco 
+
+# Using these SLR model 3 LUR models to predict microbial concentrations at each residential location (69 total residences)
+E.coli_SLR.LUR3.estim <- predict(ecoli_LUR3_algorithmmodel.95wins.noscaling, sample_data(Final.ps.noblanks.full.exp))
+Staph_SLR.LUR3.estim <- predict(staph_LUR3_algorithmmethod.95wins.noscaling, sample_data(Final.ps.noblanks.full.exp))       
+tetW_SLR.LUR3.estim <- predict(tetW_LUR3_algorithmmethod.95wins.noscaling,  sample_data(Final.ps.noblanks.full.exp))
+mecA_SLR.LUR3.estim <- predict(mecA_LUR3_algorithmmethod.95wins.noscaling, sample_data(Final.ps.noblanks.full.exp))
+
+# Check that these estimates at residential level are reasonable estimates by comparing with measuring site concentrations         
+summary(E.coli_SLR.LUR3.estim)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$ecoli_copiespm3.ln.diffmeth.mean)
+
+summary(Staph_SLR.LUR3.estim)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$staph_copiespm3.ln.diffmeth.mean)
+
+summary(tetW_SLR.LUR3.estim)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$tetw_copiespm3.ln.diffmeth.mean)
+
+summary(mecA_SLR.LUR3.estim)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$meca_copiespm3.ln.diffmeth.mean)
+# Yes all appear to be reasonable estimates of microbial concentrations  
+
+# Explore the distributions of these estimates across the study population   
+{par(mfrow= c(2,2))
+hist(E.coli_SLR.LUR3.estim)
+hist(Staph_SLR.LUR3.estim)
+hist(tetW_SLR.LUR3.estim)
+hist(mecA_SLR.LUR3.estim)}
+
+{par(mfrow= c(2,2))
+boxplot(E.coli_SLR.LUR3.estim, ylab="SLR LUR-modelled E.coli conc.")
+boxplot(Staph_SLR.LUR3.estim, ylab="SLR LUR-modelled Staph conc.")
+boxplot(tetW_SLR.LUR3.estim, ylab="SLR LUR-modelled tetW conc.")
+boxplot(mecA_SLR.LUR3.estim, ylab="SLR LUR-modelled mecA conc.")}
+
+{par(mfrow= c(2,2))
+plot(E.coli_SLR.LUR3.estim)
+plot(Staph_SLR.LUR3.estim)
+plot(tetW_SLR.LUR3.estim)
+plot(mecA_SLR.LUR3.estim)}
+# Strange pattern in the scatterplot - gathering of data at bottom right corner. TO do with selection of participants/allocation of participant ID? Could be that participants were recruited in the same village at once and given the subsequent ID. 
+# Looking into this in more detail: 
+# the pattern is very apparent for mecA 
+mecA_SLR.LUR3.estim
+as.data.frame(mecA_SLR.LUR3.estim)
+write_xlsx(as.data.frame(mecA_SLR.LUR3.estim),"C:\\Users\\beaco\\iCloudDrive\\Documents\\Utrecht\\Epidemiology MSc 2020\\Research Project_\\LUR_models\\Applying the LUR models\\mecAparticipantconcentrations.xlsx")
+# It seems that many of these participants live in the same area - see spreadsheet clustered_samples_postcodes_20220121.xlsx saved: "C:\Users\beaco\iCloudDrive\Documents\Utrecht\Epidemiology MSc 2020\Research Project_\LUR_models\Applying the LUR models" for details of postcodes (sheet 2 of excel)
+
+boxplot(E.coli_SLR.LUR3.estim, ylab="SLR LUR-modelled E.coli conc.")
+boxplot(Staph_SLR.LUR3.estim, ylab="SLR LUR-modelled Staph conc.")
+boxplot(tetW_SLR.LUR3.estim, ylab="SLR LUR-modelled tetW conc.")
+boxplot(mecA_SLR.LUR3.estim, ylab="SLR LUR-modelled mecA conc.")
+# Now I need to add this data to the sample data of the phyloseq object I am using for the resistome analyses
+# This is the PS object 
+Final.ps.noblanks.full.exp
+sample_data(Final.ps.noblanks.full.exp) # currently the sample data of this object includes the exposure proxies and copd status
+# I want to add these concentration estimates to the sample data too. 
+#"NA" column has been added randomly - remove this - introduced earlier (same as copdcaco status column)
+Final.ps.noblanks.full.exp@sam_data<- Final.ps.noblanks.full.exp@sam_data[,-209]
+
+Final.ps.noblanks.full.exp@sam_data$E.coli_SLR.LUR3.estim <- E.coli_SLR.LUR3.estim
+Final.ps.noblanks.full.exp@sam_data$Staph_SLR.LUR3.estim <- Staph_SLR.LUR3.estim
+Final.ps.noblanks.full.exp@sam_data$tetW_SLR.LUR3.estim <- tetW_SLR.LUR3.estim
+Final.ps.noblanks.full.exp@sam_data$mecA_SLR.LUR3.estim <- mecA_SLR.LUR3.estim
+
+Final.ps.noblanks.full.exp@sam_data
+names(Final.ps.noblanks.full.exp@sam_data)
+# All of the microbial marker residential estimates have now been added as columns to the sample data of the PS object - there are now 213 columns (208 proxies, copd status, E.coli, staph, mecA and tetW estimates)
+# This PS object is now ready for resistome analysis
+```
+# Applying the RF models
+```{r}
+# This is the ps object as created above
+Final.ps.noblanks.full.exp
+names(Final.ps.noblanks.full.exp@sam_data)
+
+# Using the tuned RF LUR modelling approach
+# This is the tuned RF model derived for E.coli 
+ecoli_tuned2_RF
+# This is the tuned RF model for staph
+staph_tuned2_RF
+# This is the tuned RF model for tetW
+tetw_tuned2_RF
+# This is the tuned RF model for mecA
+meca_tuned2_RF
+
+#HOWEVER all of these above models are built using the winsorised and scaled predictor variables, but in order to apply the LUR models to the participant data, these models should be run on the non scaled predictors
+# I will do this now. The models will be the same if using scaled or non-scaled predictors but I will now run with these non-scaled predictors. 
+# Previous df in which predictor variables are winsorised but not scaled
+# Inspect the df 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl
+# This df now has each crude variable (note not negative or inversed despite the names- i need to re-do this to negate and inverse these predictors where necessary), all variables also have a non-winsorized version and winsorised version (total 279 variables (139 non-winsorised, 139 winsorised) - no scaling done now. 
+
+VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl <- subset(VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl, select = -c(MindistFuranims250.NEG.95Win,MindistFuranims250.INV.95Win, nfuranims.3000m.95Win, FuranimFarm.3000m.95Win, nfuranimsWghtDist.3000m.sum.95Win, nFuranimFarmWghtDist.3000m.sum.95Win))
+# 6 fur animal variables have now been removed from the dataframe
+
+# Merge microbial measurement file with the predictor variable file
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl <- merge(VGOB1_BioA_SiteAv, VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl, by="Loc_ID", all=TRUE)
+str(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, list.len=ncol(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)) # check the type of variable for each column in the new data
+
+# Save the R dataframe as an excel file
+library("writexl")
+write_xlsx(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, "C:\\Users\\beaco\\iCloudDrive\\Documents\\Utrecht\\Epidemiology MSc 2020\\Research Project_\\LUR_models\\Applying the LUR models\\Sitemeasurementsandexppredictors_95wins_forLURapplication.xlsx")
+
+# remove column labelled 'LocID' so that the first column is now the location ID
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl$Loc_ID <- NULL
+names(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+
+# Now that the predictors are only winsorised (not scaled), I can run the LUR models again
+# Be careful to change the ending of each of the variables 
+# This is the model derived for E.coli (non-scaled predictor variables)
+# I need to create a new df with only the E.coli concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model 
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Ecoli<- VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Ecoli <- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c(staph_copiespm3.ln.diffmeth.mean,tetw_copiespm3.ln.diffmeth.mean, meca_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+Ecoli_tuned2RF_nonscaled <- randomForest(ecoli_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Ecoli, importance=TRUE,mtry=22, nodesize =6, ntree = 1000) 
+Ecoli_tuned2RF_nonscaled
+ecoli_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# This is the model for staph
+# I need to create a new df with only the staph concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model 
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Staph <- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c( ecoli_copiespm3.ln.diffmeth.mean,tetw_copiespm3.ln.diffmeth.mean, meca_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+Staph_tuned2RF_nonscaled <- randomForest(staph_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Staph, importance=TRUE, mtry=2, nodesize =6, ntree = 1000) 
+Staph_tuned2RF_nonscaled
+staph_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# This is the model for tetW
+# I need to create a new df with only the staph concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model 
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.tetw<- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c( ecoli_copiespm3.ln.diffmeth.mean,staph_copiespm3.ln.diffmeth.mean, meca_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+tetw_tuned2RF_nonscaled <- randomForest(tetw_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.tetw, importance=TRUE,mtry=2, nodesize =6, ntree = 1000 ) 
+tetw_tuned2RF_nonscaled
+tetw_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# This is the model for mecA
+# I need to create a new df with only the staph concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.meca <- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c( ecoli_copiespm3.ln.diffmeth.mean,tetw_copiespm3.ln.diffmeth.mean, staph_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+mecA_tuned2RF_nonscaled <- randomForest(meca_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.meca, importance=TRUE, mtry=13, nodesize =23, ntree = 1000) 
+mecA_tuned2RF_nonscaled
+meca_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# In order to apply the LUR models above to the participant livestock exposure data, the names of the livestock exposures must be the same, therefore I will add ".95Win" to the names of each of the predictors (note that these variables are not actually winsorised)
+names(Final.ps.noblanks.full.exp@sam_data)
+names(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+
+# Using these RF models to predict microbial concentrations at each residential location (69 total residences)
+E.coli_tunedRF_estimate <- predict(Ecoli_tuned2RF_nonscaled, sample_data(Final.ps.noblanks.full.exp))
+Staph_tunedRF_estimate <- predict(Staph_tuned2RF_nonscaled, sample_data(Final.ps.noblanks.full.exp))       
+tetW_tunedRF_estimate <- predict(tetw_tuned2RF_nonscaled,  sample_data(Final.ps.noblanks.full.exp))
+mecA_tunedRF_estimate <- predict(mecA_tuned2RF_nonscaled, sample_data(Final.ps.noblanks.full.exp))
+
+# Check that these estimates at residential level are reasonable estimates by comparing with measuring site concentrations         
+summary(E.coli_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$ecoli_copiespm3.ln.diffmeth.mean)
+
+summary(Staph_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$staph_copiespm3.ln.diffmeth.mean)
+
+summary(tetW_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$tetw_copiespm3.ln.diffmeth.mean)
+
+summary(mecA_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$meca_copiespm3.ln.diffmeth.mean)
+# Yes all appear to be reasonable estimates of microbial concentrations  
+
+# Explore the distributions of these estimates across the study population   
+{par(mfrow= c(2,2))
+hist(E.coli_tunedRF_estimate)
+hist(Staph_tunedRF_estimate)
+hist(tetW_tunedRF_estimate)
+hist(mecA_tunedRF_estimate)}
+
+{par(mfrow= c(2,2))
+boxplot(E.coli_tunedRF_estimate, ylab="Tuned RF LUR-modelled E.coli conc.")
+boxplot(Staph_tunedRF_estimate, ylab="Tuned RF LUR-modelled Staph conc.")
+boxplot(tetW_tunedRF_estimate, ylab="Tuned RF LUR-modelled tetW conc.")
+boxplot(mecA_tunedRF_estimate, ylab="Tuned RF LUR-modelled mecA conc.")}
+
+{par(mfrow= c(2,2))
+plot(E.coli_tunedRF_estimate)
+plot(Staph_tunedRF_estimate)
+plot(tetW_tunedRF_estimate)
+plot(mecA_tunedRF_estimate)}
+# Strange pattern in the scatterplot - gathering of data at bottom right corner. TO do with selection of participants/allocation of participant ID? Could be that participants were recruited in the same village at once and given the subsequent ID. 
+
+# Now I need to add this data to the sample data of the phyloseq object I am using for the resistome analyses
+# This is the PS object 
+Final.ps.noblanks.full.exp
+names(Final.ps.noblanks.full.exp@sam_data) # currently the sample data of this object includes the exposure proxies and copd status and the SLR LUR-modelled concentrations too from above
+# I want to add these tuned RF estimated concentrations to the sample data too. 
+Final.ps.noblanks.full.exp@sam_data$E.coli_tunedRF.LUR3.estim <- E.coli_tunedRF_estimate
+Final.ps.noblanks.full.exp@sam_data$Staph_tunedRF.LUR3.estim <- Staph_tunedRF_estimate
+Final.ps.noblanks.full.exp@sam_data$tetW_tunedRF.LUR3.estim <- tetW_tunedRF_estimate
+Final.ps.noblanks.full.exp@sam_data$mecA_tunedRF.LUR3.estim <- mecA_tunedRF_estimate
+names(Final.ps.noblanks.full.exp@sam_data)
+# All of the microbial marker residential estimates have now been added as columns to the sample data of the PS object - there are now 217 columns (208 proxies, copd status, E.coli, staph, mecA and tetW SLR and RF LUR-modelled concentrations)
+# This PS object is now ready for resistome analysis
+```
+# Applying the RF models - new models (as of 24th April 2023)
+```{r}
+# This is the ps object as created above
+Final.ps.noblanks.full.exp
+names(Final.ps.noblanks.full.exp@sam_data)
+
+# Using the tuned RF LUR modelling approach
+# This is the tuned RF model derived for E.coli 
+ecoli_tuned2_RF
+# This is the tuned RF model for staph
+staph_tuned2_RF
+# This is the tuned RF model for tetW
+tetw_tuned2_RF
+# This is the tuned RF model for mecA
+meca_tuned2_RF
+
+#HOWEVER all of these above models are built using the winsorised and scaled predictor variables, but in order to apply the LUR models to the participant data, these models should be run on the non scaled predictors
+# I will do this now. The models will be the same if using scaled or non-scaled predictors but I will now run with these non-scaled predictors. 
+# Previous df in which predictor variables are winsorised but not scaled
+# Inspect the df 
+VGOB1_ExpoV_Adj_KeptN20_95Win_LURappl
+# This df now has each crude variable (note not negative or inversed despite the names- i need to re-do this to negate and inverse these predictors where necessary), all variables also have a non-winsorized version and winsorised version (total 279 variables (139 non-winsorised, 139 winsorised) - no scaling done now. 
+
+VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl <- subset(VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl, select = -c(MindistFuranims250.NEG.95Win,MindistFuranims250.INV.95Win, nfuranims.3000m.95Win, FuranimFarm.3000m.95Win, nfuranimsWghtDist.3000m.sum.95Win, nFuranimFarmWghtDist.3000m.sum.95Win))
+# 6 fur animal variables have now been removed from the dataframe
+
+# Merge microbial measurement file with the predictor variable file
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl <- merge(VGOB1_BioA_SiteAv, VGOB1_ExpoV_Adj_KeptN20_95Winonly_LURappl, by="Loc_ID", all=TRUE)
+str(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, list.len=ncol(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)) # check the type of variable for each column in the new data
+
+# Save the R dataframe as an excel file
+library("writexl")
+write_xlsx(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, "C:\\Users\\beaco\\iCloudDrive\\Documents\\Utrecht\\Epidemiology MSc 2020\\Research Project_\\LUR_models\\Applying the LUR models\\Sitemeasurementsandexppredictors_95wins_forLURapplication.xlsx")
+
+# remove column labelled 'LocID' so that the first column is now the location ID
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl$Loc_ID <- NULL
+names(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+
+# Now that the predictors are only winsorised (not scaled), I can run the LUR models again
+# Be careful to change the ending of each of the variables 
+# This is the model derived for E.coli (non-scaled predictor variables)
+# I need to create a new df with only the E.coli concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model 
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Ecoli<- VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Ecoli <- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c(staph_copiespm3.ln.diffmeth.mean,tetw_copiespm3.ln.diffmeth.mean, meca_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+Ecoli_tuned2RF_nonscaled <- randomForest(ecoli_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Ecoli, importance=TRUE,mtry=22, nodesize =6, ntree = 1000) 
+Ecoli_tuned2RF_nonscaled
+ecoli_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# This is the model for staph
+# I need to create a new df with only the staph concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model 
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Staph <- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c( ecoli_copiespm3.ln.diffmeth.mean,tetw_copiespm3.ln.diffmeth.mean, meca_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+Staph_tuned2RF_nonscaled <- randomForest(staph_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.Staph, importance=TRUE, mtry=2, nodesize =6, ntree = 1000) 
+Staph_tuned2RF_nonscaled
+staph_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# This is the model for tetW
+# I need to create a new df with only the staph concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model 
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.tetw<- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c( ecoli_copiespm3.ln.diffmeth.mean,staph_copiespm3.ln.diffmeth.mean, meca_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+tetw_tuned2RF_nonscaled <- randomForest(tetw_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.tetw, importance=TRUE,mtry=2, nodesize =6, ntree = 1000 ) 
+tetw_tuned2RF_nonscaled
+tetw_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# This is the model for mecA
+# I need to create a new df with only the staph concentrations in the df - I don't want the RF model to be taking into account the other microbial marker concentrations into the model
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl
+VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.meca <- subset(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl, select = -c( ecoli_copiespm3.ln.diffmeth.mean,tetw_copiespm3.ln.diffmeth.mean, staph_copiespm3.ln.diffmeth.mean))
+set.seed(123)
+mecA_tuned2RF_nonscaled <- randomForest(meca_copiespm3.ln.diffmeth.mean ~ ., data=VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl.meca, importance=TRUE, mtry=13, nodesize =23, ntree = 1000) 
+mecA_tuned2RF_nonscaled
+meca_tuned2_RF# compare to old model with 10-90th percentile scaling of the predictor variables - the % variance explained is now different
+
+# In order to apply the LUR models above to the participant livestock exposure data, the names of the livestock exposures must be the same, therefore I will add ".95Win" to the names of each of the predictors (note that these variables are not actually winsorised)
+names(Final.ps.noblanks.full.exp@sam_data)
+names(VGOB1_BioA_SiteAv_ExpoV_KeptN20_95Win_LURappl)
+
+# Using these RF models to predict microbial concentrations at each residential location (69 total residences)
+E.coli_tunedRF_estimate <- predict(Ecoli_tuned2RF_nonscaled, sample_data(Final.ps.noblanks.full.exp))
+Staph_tunedRF_estimate <- predict(Staph_tuned2RF_nonscaled, sample_data(Final.ps.noblanks.full.exp))       
+tetW_tunedRF_estimate <- predict(tetw_tuned2RF_nonscaled,  sample_data(Final.ps.noblanks.full.exp))
+mecA_tunedRF_estimate <- predict(mecA_tuned2RF_nonscaled, sample_data(Final.ps.noblanks.full.exp))
+
+# Check that these estimates at residential level are reasonable estimates by comparing with measuring site concentrations         
+summary(E.coli_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$ecoli_copiespm3.ln.diffmeth.mean)
+
+summary(Staph_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$staph_copiespm3.ln.diffmeth.mean)
+
+summary(tetW_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$tetw_copiespm3.ln.diffmeth.mean)
+
+summary(mecA_tunedRF_estimate)
+summary(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9$meca_copiespm3.ln.diffmeth.mean)
+# Yes all appear to be reasonable estimates of microbial concentrations  
+
+# Explore the distributions of these estimates across the study population   
+{par(mfrow= c(2,2))
+hist(E.coli_tunedRF_estimate)
+hist(Staph_tunedRF_estimate)
+hist(tetW_tunedRF_estimate)
+hist(mecA_tunedRF_estimate)}
+
+{par(mfrow= c(2,2))
+boxplot(E.coli_tunedRF_estimate, ylab="Tuned RF LUR-modelled E.coli conc.")
+boxplot(Staph_tunedRF_estimate, ylab="Tuned RF LUR-modelled Staph conc.")
+boxplot(tetW_tunedRF_estimate, ylab="Tuned RF LUR-modelled tetW conc.")
+boxplot(mecA_tunedRF_estimate, ylab="Tuned RF LUR-modelled mecA conc.")}
+
+{par(mfrow= c(2,2))
+plot(E.coli_tunedRF_estimate)
+plot(Staph_tunedRF_estimate)
+plot(tetW_tunedRF_estimate)
+plot(mecA_tunedRF_estimate)}
+# Strange pattern in the scatterplot - gathering of data at bottom right corner. TO do with selection of participants/allocation of participant ID? Could be that participants were recruited in the same village at once and given the subsequent ID. 
+
+# Now I need to add this data to the sample data of the phyloseq object I am using for the resistome analyses
+# This is the PS object 
+Final.ps.noblanks.full.exp
+names(Final.ps.noblanks.full.exp@sam_data) # currently the sample data of this object includes the exposure proxies and copd status and the SLR LUR-modelled concentrations too from above
+# I want to add these tuned RF estimated concentrations to the sample data too. 
+Final.ps.noblanks.full.exp@sam_data$E.coli_tunedRF.LUR3.estim <- E.coli_tunedRF_estimate
+Final.ps.noblanks.full.exp@sam_data$Staph_tunedRF.LUR3.estim <- Staph_tunedRF_estimate
+Final.ps.noblanks.full.exp@sam_data$tetW_tunedRF.LUR3.estim <- tetW_tunedRF_estimate
+Final.ps.noblanks.full.exp@sam_data$mecA_tunedRF.LUR3.estim <- mecA_tunedRF_estimate
+names(Final.ps.noblanks.full.exp@sam_data)
+# All of the microbial marker residential estimates have now been added as columns to the sample data of the PS object - there are now 217 columns (208 proxies, copd status, E.coli, staph, mecA and tetW SLR and RF LUR-modelled concentrations)
+# This PS object is now ready for resistome analysis
+```
+# Comparing LUR3 and tLURF predictions
+```{r}
+# Post meeting with Gerard on 29/03/2022 it was suggested that I look at the correlation between the predictions from the 2 models
+# JK suggested that I look at the correlation between the RF and SLR predictions – this can be done using simple scatter plot and then a bland-Altman plot to show whether there is non-linearity in our data. If there is non-linearity in our data after applying the models, then the models may be ‘predicting different exposures’ (not sure what was meant by this comment). Need to look into predictions and bland-Altman plot to compare the different predictions. 
+names(Final.ps.noblanks.full.exp@sam_data)
+corr.df.LURmodel.preds <- data.frame(Final.ps.noblanks.full.exp@sam_data)
+corr.df.LURmodel.preds <- subset(corr.df.LURmodel.preds[c(210:217)])# df now just contains the SLR and RF predictions
+
+# Correlation between LUR3-predicted E.coli concentrations and RF LUR-predicted concentrations 
+ecoli.SLRvsRF.corr<- cor(corr.df.LURmodel.preds$E.coli_SLR.LUR3.estim, corr.df.LURmodel.preds$E.coli_tunedRF.LUR3.estim)
+ecoli.SLRvsRF.corrpval <- cor.test(corr.df.LURmodel.preds$E.coli_SLR.LUR3.estim, corr.df.LURmodel.preds$E.coli_tunedRF.LUR3.estim)
+# Correlation between LUR3-predicted staph concentrations and RF LUR-predicted concentrations 
+staph.SLRvsRF.corr <- cor(corr.df.LURmodel.preds$Staph_SLR.LUR3.estim, corr.df.LURmodel.preds$Staph_tunedRF.LUR3.estim)
+staph.SLRvsRF.corrpval<- cor.test(corr.df.LURmodel.preds$Staph_SLR.LUR3.estim, corr.df.LURmodel.preds$Staph_tunedRF.LUR3.estim)
+# Correlation between LUR3-predicted tetW concentrations and RF LUR-predicted concentrations 
+tetw.SLRvsRF.corr <- cor(corr.df.LURmodel.preds$tetW_SLR.LUR3.estim, corr.df.LURmodel.preds$tetW_tunedRF.LUR3.estim)
+tetw.SLRvsRF.corrpval<- cor.test(corr.df.LURmodel.preds$tetW_SLR.LUR3.estim, corr.df.LURmodel.preds$tetW_tunedRF.LUR3.estim)
+# Correlation between LUR3-predicted mecA concentrations and RF LUR-predicted concentrations 
+mecA.SLRvsRF.corr <- cor(corr.df.LURmodel.preds$mecA_SLR.LUR3.estim, corr.df.LURmodel.preds$mecA_tunedRF.LUR3.estim)
+meca.SLRvsRF.corrpval<- cor.test(corr.df.LURmodel.preds$mecA_SLR.LUR3.estim, corr.df.LURmodel.preds$mecA_tunedRF.LUR3.estim)
+
+# create df with all correlations between SLR and RF model predictions (for the same microbial marker)
+SLRvsRF_correlation_coefficient <- c(ecoli.SLRvsRF.corr,staph.SLRvsRF.corr, tetw.SLRvsRF.corr, mecA.SLRvsRF.corr)
+p_value <- c(ecoli.SLRvsRF.corrpval$p.value, staph.SLRvsRF.corrpval$p.value, tetw.SLRvsRF.corrpval$p.value, meca.SLRvsRF.corrpval$p.value)
+
+correlation.df <- data.frame(SLRvsRF_correlation_coefficient, p_value)
+row.names(correlation.df) <- c("E. coli", "Staph", "tetW", "mecA")
+
+correlation.df # print the dataframe created with the correlation coefficients and p-values
+write_xlsx(correlation.df)
+
+# out of interest I will also look at the correlation between the other model predictions, there are very strong correlations between the SLR and RF predictions for the same microbial marker, but maybe these also exist for the other markers too, so is worth checking...
+all.correlations <- cor(corr.df.LURmodel.preds)
+library(psych)
+corr.test.pvals <- cor.mtest(corr.df.LURmodel.preds, conf.level = 0.99) # I set the confidence level to 99% i.e. correlation coefficients will only be printed in the correlation plot if p-value <0.01
+
+# Change the colnames and rownames so clear in correlation plot 
+colnames(all.correlations)<- c("E. coli LUR3 predictions","Staph LUR3 predictions","tetW LUR3 predictions","mecA LUR3 predictions", "E. coli tLURF model predictions" , "Staph tLURF model predictions" , "tetW tLURF model predictions" , "mecA tLURF model predictions")
+
+rownames(all.correlations)<- c("E. coli LUR3 predictions","Staph LUR3 predictions","tetW LUR3 predictions","mecA LUR3 predictions", "E. coli tLURF model predictions" , "Staph tLURF model predictions" , "tetW tLURF model predictions" , "mecA tLURF model predictions")
+
+par(xpd=TRUE)
+corrplot(all.correlations, p.mat = corr.test.pvals$p, method = 'square', type = 'lower', insig='blank', addCoef.col ='black', number.cex = 0.5, order = 'original', diag=FALSE, tl.cex = 0.5, tl.col = "black")
+```
+
+```{r}
+## Using the Bland-Altman method to compare the SLR and RF methods to predict residential concentrations
+library(ggplot2)
+# E. coli 
+# Create dataframe with only E. coli predictions 
+corr.df.LURmodel.preds.Ecoli <- subset(corr.df.LURmodel.preds[c(1,5)])# df now just contains the SLR and RF predictions
+
+#create new column for average measurement
+corr.df.LURmodel.preds.Ecoli$avg <- rowMeans(corr.df.LURmodel.preds.Ecoli) 
+#create new column for difference in measurements
+corr.df.LURmodel.preds.Ecoli$diff <- corr.df.LURmodel.preds.Ecoli$E.coli_SLR.LUR3.estim - corr.df.LURmodel.preds.Ecoli$E.coli_tunedRF.LUR3.estim
+#view first six rows of data
+head(corr.df.LURmodel.preds.Ecoli)
+#find average difference
+mean_diff <- mean(corr.df.LURmodel.preds.Ecoli$diff)
+mean_diff # mean difference between teh SLR predicted concentrations and the RF predicted concentrations is -0.03027055 
+
+#find lower 95% confidence interval limits
+lower <- mean_diff - 1.96*sd(corr.df.LURmodel.preds.Ecoli$diff)
+lower # -0.516371 is the lower CI 
+#find upper 95% confidence interval limits
+upper <- mean_diff + 1.96*sd(corr.df.LURmodel.preds.Ecoli$diff)
+upper # 0.4558299 is the upper CI 
+
+#create Bland-Altman plot
+ggplot(corr.df.LURmodel.preds.Ecoli, aes(x = avg, y = diff)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = mean_diff) +
+  geom_hline(yintercept = lower, color = "red", linetype="dashed") +
+  geom_hline(yintercept = upper, color = "red", linetype="dashed") +
+  ggtitle("E. coli LUR models Bland-Altman Plot") +
+  ylab("Difference Between SLR3 and tRF LUR model predictions") +
+  xlab("Average SLR3 and tRF LUR model prediction")
+
+# Staph
+# Create dataframe with only E. coli predictions 
+corr.df.LURmodel.preds.staph <- subset(corr.df.LURmodel.preds[c(2,6)])# df now just contains the SLR and RF predictions
+
+#create new column for average measurement
+corr.df.LURmodel.preds.staph$avg <- rowMeans(corr.df.LURmodel.preds.staph) 
+#create new column for difference in measurements
+corr.df.LURmodel.preds.staph$diff <- corr.df.LURmodel.preds.staph$Staph_SLR.LUR3.estim - corr.df.LURmodel.preds.staph$Staph_tunedRF.LUR3.estim
+#view first six rows of data
+head(corr.df.LURmodel.preds.staph)
+#find average difference
+mean_diff_staph <- mean(corr.df.LURmodel.preds.staph$diff)
+mean_diff_staph # mean difference between teh SLR predicted concentrations and the RF predicted concentrations is -0.03027055 
+
+#find lower 95% confidence interval limits
+lower_staph <- mean_diff_staph - 1.96*sd(corr.df.LURmodel.preds.staph$diff)
+lower_staph 
+#find upper 95% confidence interval limits
+upper_staph <- mean_diff_staph + 1.96*sd(corr.df.LURmodel.preds.staph$diff)
+upper_staph 
+
+#create Bland-Altman plot
+ggplot(corr.df.LURmodel.preds.staph, aes(x = avg, y = diff)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = mean_diff_staph) +
+  geom_hline(yintercept = lower_staph, color = "red", linetype="dashed") +
+  geom_hline(yintercept = upper_staph, color = "red", linetype="dashed") +
+  ggtitle("Staph LUR models Bland-Altman Plot") +
+  ylab("Difference between SLR3 and tRF staph LUR model predictions") +
+  xlab("Average SLR3 and tRF staph LUR model prediction")
+
+# tetW
+# Create dataframe with only E. coli predictions 
+corr.df.LURmodel.preds.tetw<- subset(corr.df.LURmodel.preds[c(3,7)])# df now just contains the SLR and RF predictions
+
+#create new column for average measurement
+corr.df.LURmodel.preds.tetw$avg <- rowMeans(corr.df.LURmodel.preds.tetw) 
+#create new column for difference in measurements
+corr.df.LURmodel.preds.tetw$diff <- corr.df.LURmodel.preds.tetw$tetW_SLR.LUR3.estim - corr.df.LURmodel.preds.tetw$tetW_tunedRF.LUR3.estim
+#view first six rows of data
+head(corr.df.LURmodel.preds.tetw)
+#find average difference
+mean_diff_tetW <- mean(corr.df.LURmodel.preds.tetw$diff)
+mean_diff_tetW
+#find lower 95% confidence interval limits
+lower_tetW <- mean_diff_tetW - 1.96*sd(corr.df.LURmodel.preds.tetw$diff)
+lower_tetW 
+#find upper 95% confidence interval limits
+upper_tetW <- mean_diff_tetW + 1.96*sd(corr.df.LURmodel.preds.tetw$diff)
+upper_tetW 
+
+#create Bland-Altman plot
+ggplot(corr.df.LURmodel.preds.tetw, aes(x = avg, y = diff)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = mean_diff_tetW) +
+  geom_hline(yintercept = lower_tetW, color = "red", linetype="dashed") +
+  geom_hline(yintercept = upper_tetW, color = "red", linetype="dashed") +
+  ggtitle("tetW LUR models Bland-Altman Plot") +
+  ylab("Difference Between SLR3 and tRF LUR tetW model predictions") +
+  xlab("Average SLR3 and tRF LUR tetW model prediction")
+
+# mecA
+# Create dataframe with only E. coli predictions 
+corr.df.LURmodel.preds.mecA <- subset(corr.df.LURmodel.preds[c(4,8)])# df now just contains the SLR and RF predictions
+#create new column for average measurement
+corr.df.LURmodel.preds.mecA$avg <- rowMeans(corr.df.LURmodel.preds.mecA) 
+#create new column for difference in measurements
+corr.df.LURmodel.preds.mecA$diff <- corr.df.LURmodel.preds.mecA$mecA_SLR.LUR3.estim - corr.df.LURmodel.preds.mecA$mecA_tunedRF.LUR3.estim
+#view first six rows of data
+head(corr.df.LURmodel.preds.Ecoli)
+#find average difference
+mean_diff_meca <- mean(corr.df.LURmodel.preds.mecA$diff)
+mean_diff_meca 
+
+#find lower 95% confidence interval limits
+lower_meca <- mean_diff_meca - 1.96*sd(corr.df.LURmodel.preds.mecA$diff)
+lower_meca 
+#find upper 95% confidence interval limits
+upper_meca <- mean_diff + 1.96*sd(corr.df.LURmodel.preds.mecA$diff)
+upper_meca 
+
+#create Bland-Altman plot
+ggplot(corr.df.LURmodel.preds.mecA, aes(x = avg, y = diff)) +
+  geom_point(size=2) +
+  geom_hline(yintercept = mean_diff_meca) +
+  geom_hline(yintercept = lower_meca, color = "red", linetype="dashed") +
+  geom_hline(yintercept = upper_meca, color = "red", linetype="dashed") +
+  ggtitle("mecA LUR models Bland-Altman Plot") +
+  ylab("Difference between SLR3 and tRF LUR mecA model predictions") +
+  xlab("Average SLR3 and tRF LUR mecA model prediction")
+```
+
+# Predicted vs Observed scatterplots - all models
+```{r}
+# LUR3 Training models
+
+# E. coli
+# Make a scatterplot of predicted vs observed values
+# Use training model to predict E. coli concentrations
+Ecoli_modelpreds <- predict(ecoli_LUR3_algorithmmodel,newdata=VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3)
+# Overall comparison of predicted vs observed
+plot(Ecoli_modelpreds, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean, xlab="Training model LUR3-predicted E. coli DNA concentration (ln copies/m^3)", ylab="Observed E. coli DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean ~ Ecoli_modelpreds))
+
+# ggplot2 version of this scatterplot
+# Create a data frame with the variables for the plot
+ecoli_trainLUR3_data <- data.frame(Ecoli_modelpreds = Ecoli_modelpreds, 
+                   Observed_Ecoli = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean)
+
+# Create the plot
+ecoli_trainLUR3_plot <- ggplot(ecoli_trainLUR3_data, aes(x = Ecoli_modelpreds, y = Observed_Ecoli)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  xlab("Training model LUR3-predicted E. coli DNA concentration (ln copies/m^3)") +
+  ylab("Observed E. coli DNA concentration (ln copies/m^3)") +
+  theme_classic()
+
+# Staph
+# Make a scatterplot of predicted vs observed values
+# Use training model to predict E. coli concentrations
+staph_trainmodel_preds <- predict(staph_LUR3_algorithmmethod,newdata=VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3)
+
+# Overall comparison of predicted vs observed
+plot(staph_trainmodel_preds, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$staph_copiespm3.ln.diffmeth.mean, xlab="Training model LUR3-predicted Staph DNA concentration (ln copies/m^3)", ylab="Observed Staph DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$staph_copiespm3.ln.diffmeth.mean ~ staph_trainmodel_preds))
+
+# tetW 
+# Make a scatterplot of predicted vs observed values
+# Use training model to predict E. coli concentrations
+tetw_trainmodel_preds <- predict(tetW_LUR3_algorithmmethod,newdata=VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3)
+
+# Overall comparison of predicted vs observed
+plot(tetw_trainmodel_preds, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$tetw_copiespm3.ln.diffmeth.mean, xlab="Training model LUR3-predicted tetW DNA concentration (ln copies/m^3)", ylab="Observed tetW DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$tetw_copiespm3.ln.diffmeth.mean ~ tetw_trainmodel_preds))
+
+
+# mecA
+# Make a scatterplot of predicted vs observed values
+# Use training model to predict E. coli concentrations
+meca_trainmodel_preds <- predict(mecA_LUR3_algorithmmethod,newdata=VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3)
+
+# Overall comparison of predicted vs observed
+plot(meca_trainmodel_preds, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$meca_copiespm3.ln.diffmeth.mean, xlab="Training model LUR3-predicted mecA DNA concentration (ln copies/m^3)", ylab="Observed mecA DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$meca_copiespm3.ln.diffmeth.mean ~ meca_trainmodel_preds))
+
+# tLURF training models: 
+# E. coli 
+# Scatterplot of training tLURF modelled concentrations and actual concentrations
+plot(predicted_ecoli_tuned2_RF, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_E.coli$ecoli_copiespm3.ln.diffmeth.mean, xlab = "Training tLURF model-predicted E. coli concentrations (training model)", ylab="Observed E. coli concentrations")
+
+# ggplot2 version of this scatterplot
+# Create a data frame with the variables for the plot
+ecoli_traintLURF_data <- data.frame(Ecoli_modelpreds = predicted_ecoli_tuned2_RF, 
+                   Observed_Ecoli = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_E.coli$ecoli_copiespm3.ln.diffmeth.mean)
+
+# Create the plot
+ecoli_traintLURF_plot <- ggplot(ecoli_traintLURF_data, aes(x = Ecoli_modelpreds, y = Observed_Ecoli)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  xlab("Training model tLURF-predicted E. coli DNA concentration (ln copies/m^3)") +
+  ylab("Observed E. coli DNA concentration (ln copies/m^3)") +
+  theme_classic()
+
+# Staph
+# Scatterplot of training tLURF modelled concentrations and actual concentrations
+plot(predict(staph_tuned2_RF, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_staph), VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_staph$staph_copiespm3.ln.diffmeth.mean, xlab = "Training tLURF model-predicted Staph concentrations (training model)", ylab="Observed E. coli concentrations")
+
+# tetW
+# Scatterplot of training tLURF modelled concentrations and actual concentrations
+plot(predict(tetw_tuned2_RF, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_tetW), VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_tetW$tetw_copiespm3.ln.diffmeth.mean, xlab = "Training tLURF model-predicted tetW concentrations (training model)", ylab="Observed tetW concentrations")
+
+#mecA
+# Scatterplot of training tLURF modelled concentrations and actual concentrations
+plot(predict(meca_tuned2_RF, VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_mecA), VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_mecA$meca_copiespm3.ln.diffmeth.mean, xlab = "Training tLURF model-predicted mecA concentrations (training model)", ylab="Observed mecA concentrations")
+
+# LUR3 10-fold CV models
+# E. coli 
+plot(VGOB1_subsetvalID1to10$E.coli_PRED_HV, VGOB1_subsetvalID1to10$ecoli_copiespm3.ln.diffmeth.mean, xlab="10-fold CV LUR3-predicted E. coli DNA concentration (ln copies/m^3)", ylab="Observed E. coli DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10$ecoli_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10$E.coli_PRED_HV))
+
+# Staph 
+plot(VGOB1_subsetvalID1to10$Staph_PRED_HV, VGOB1_subsetvalID1to10$staph_copiespm3.ln.diffmeth.mean, xlab="10-fold CV LUR3-predicted Staph DNA concentration (ln copies/m^3)", ylab="Observed Staph DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10$staph_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10$Staph_PRED_HV))
+# tetW
+plot(VGOB1_subsetvalID1to10$tetW_PRED_HV, VGOB1_subsetvalID1to10$tetw_copiespm3.ln.diffmeth.mean, xlab="10-fold CV LUR3-predicted tetW DNA concentration (ln copies/m^3)", ylab="Observed tetW DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10$tetw_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10$tetW_PRED_HV))
+
+#mecA
+plot(meca_SLR3_10foldCV_predicted,meca_observed , xlab="10-fold CV LUR3-predicted meca concentrations (10-fold HV)", ylab="Observed mecA concentrations")
+abline(lm(VGOB1_subsetvalID1to10$meca_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10$mecA_PRED_HV))
+
+tLURF 10-fold CV models
+# E. coli 
+plot(E.coli_RFtuned2_10foldCV_predicted,E.coli_observed , xlab="tLURF-predicted E. coli DNA concentration (ln copies/m^3)", ylab="Observed E. coli DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10$ecoli_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10$ecoli_predicted_10foldHV))
+
+# Staph 
+plot(Staph_RFtuned2_10foldCV_predicted,Staph_observed , xlab="10-fold CV tLURF-predicted staph DNA concentration (ln copies/m^3)", ylab="Observed staph DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10_RFtuned2_staph$staph_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10_RFtuned2_staph$staph_predicted_tuned2RF_10foldHV))
+# tetW 
+plot(tetw_RFtuned2_10foldCV_predicted,tetw_observed , xlab="10-fold CV tLURF-predicted tetW DNA concentration (ln copies/m^3)", ylab="Observed tetW DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10_RFtuned2_tetw$tetw_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10_RFtuned2_tetw$tetw_predicted_tuned2RF_10foldHV))
+
+#mecA 
+plot(meca_RFtuned2_10foldCV_predicted,meca_observed , xlab="10-fold CV tLURF-predicted mecA DNA concentration (ln copies/m^3)", ylab="Observed mecA DNA concentration (ln copies/m^3)", cex.lab=0.85)
+abline(lm(VGOB1_subsetvalID1to10_RFtuned2_meca$meca_copiespm3.ln.diffmeth.mean ~ VGOB1_subsetvalID1to10_RFtuned2_meca$meca_predicted_tuned2RF_10foldHV))
+
+```
+
+# Combine 2 scatterplots for each microbial marker
+```{r}
+# Training models
+# E. coli LUR3
+ecoli_trainLUR3_data <- data.frame(Ecoli_modelpreds = Ecoli_modelpreds, 
+                   Observed_Ecoli = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean)
+
+# E. coli tLURF 
+ecoli_traintLURF_data <- data.frame(Ecoli_modelpreds = predicted_ecoli_tuned2_RF, 
+                   Observed_Ecoli = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean)
+
+# Plots combined into one - E.coli training models
+ggplot(ecoli_trainLUR3_data, aes(x = Ecoli_modelpreds, y = Observed_Ecoli, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=ecoli_traintLURF_data, aes(x=Ecoli_modelpreds, y=Observed_Ecoli, color = "tLURF"), shape=19, size= 3) +
+  xlab("Training model-predicted E. coli DNA concentrations (ln copies/m^3)") +
+  ylab("Observed E. coli DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "Training model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("E. coli training model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Staph
+# Staph LUR3
+staph_traintLUR3_data <- data.frame(Staph_modelpreds = staph_trainmodel_preds, 
+                   Observed_staph = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$staph_copiespm3.ln.diffmeth.mean)
+
+# Staph tLURF
+staph_traintLURF_data <- data.frame(Staph_modelpreds = predicted_staph_tuned2_RF, 
+                   Observed_staph = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$staph_copiespm3.ln.diffmeth.mean)
+
+# combine ggplots together
+
+ggplot(staph_traintLUR3_data, aes(x = Staph_modelpreds, y = Observed_staph, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=staph_traintLURF_data, aes(x=Staph_modelpreds, y=Observed_staph, color = "tLURF"), shape=19, size= 3) +
+  xlab("Training model-predicted Staph DNA concentrations (ln copies/m^3)") +
+  ylab("Observed Staph DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "Training model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("Staph training model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# tetW
+# tetW LUR3
+tetw_trainLUR3_data <- data.frame(tetW_modelpreds = tetw_trainmodel_preds, 
+                   Observed_tetw = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$tetw_copiespm3.ln.diffmeth.mean)
+
+# tetW tLURF
+tetw_traintLURF_data <- data.frame(tetW_modelpreds = predicted_tetw_tuned2_RF, 
+                   Observed_tetw = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$tetw_copiespm3.ln.diffmeth.mean)
+
+# combine ggplots together
+
+ggplot(tetw_trainLUR3_data, aes(x = tetW_modelpreds, y = Observed_tetw, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=tetw_traintLURF_data, aes(x=tetW_modelpreds, y=Observed_tetw, color = "tLURF"), shape=19, size= 3) +
+  xlab("Training model-predicted tetW DNA concentrations (ln copies/m^3)") +
+  ylab("Observed tetW DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "Training model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("tetW training model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# mecA
+# mecA LUR3
+meca_trainLUR3_data <- data.frame(mecA_modelpreds = meca_trainmodel_preds, 
+                   Observed_mecA = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$meca_copiespm3.ln.diffmeth.mean)
+
+# mecA tLURF
+mecA_traintLURF_data <- data.frame(mecA_modelpreds = predicted_meca_tuned2_RF, 
+                   Observed_mecA = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$meca_copiespm3.ln.diffmeth.mean)
+
+# combine ggplots together
+ggplot(meca_trainLUR3_data, aes(x = mecA_modelpreds, y = Observed_mecA, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=mecA_traintLURF_data, aes(x=mecA_modelpreds, y=Observed_mecA, color = "tLURF"), shape=19, size= 3) +
+  xlab("Training model-predicted mecA DNA concentrations (ln copies/m^3)") +
+  ylab("Observed mecA DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "Training model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("mecA training model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# 10-fold CV models
+# E. coli LUR3 
+ecoli_10foldCVLUR3_data <- data.frame(Ecoli_modelpreds = ecoli_LUR3_10foldCV_preds, 
+                   Observed_Ecoli = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean)
+
+# E. coli tLURF 
+ecoli_10foldCVtLURF_data <- data.frame(Ecoli_modelpreds = E.coli_RFtuned2_10foldCV_predicted, 
+                   Observed_Ecoli = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$ecoli_copiespm3.ln.diffmeth.mean)
+
+# Plots combined into one - E.coli training models
+ggplot(ecoli_10foldCVLUR3_data, aes(x = Ecoli_modelpreds, y = Observed_Ecoli, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=ecoli_10foldCVtLURF_data, aes(x=Ecoli_modelpreds, y=Observed_Ecoli, color = "tLURF"), shape=19, size= 3) +
+  xlab("10-fold CV model-predicted E. coli DNA concentrations (ln copies/m^3)") +
+  ylab("Observed E. coli DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "10-fold CV model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("E. coli 10-fold CV model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Staph LUR3 
+staph_10foldCVLUR3_data <- data.frame(Staph_modelpreds = staph_LUR3_10foldCV_preds, 
+                   Observed_Staph = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$staph_copiespm3.ln.diffmeth.mean)
+
+
+# Staph tLURF 
+staph_10foldCVtLURF_data <- data.frame(Staph_modelpreds = Staph_RFtuned2_10foldCV_predicted, 
+                   Observed_Staph = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$staph_copiespm3.ln.diffmeth.mean)
+
+
+# Plots combined into one - Staph training models
+ggplot(staph_10foldCVLUR3_data, aes(x = Staph_modelpreds, y = Observed_Staph, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=staph_10foldCVtLURF_data, aes(x=Staph_modelpreds, y=Observed_Staph, color = "tLURF"), shape=19, size= 3) +
+  xlab("10-fold CV model-predicted Staph DNA concentrations (ln copies/m^3)") +
+  ylab("Observed Staph DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "10-fold CV model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("Staph 10-fold CV model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# tetW LUR3 
+tetw_10foldCVLUR3_data <- data.frame(tetW_modelpreds = tetW_LUR3_10foldCV_preds, 
+                   Observed_tetW = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$tetw_copiespm3.ln.diffmeth.mean)
+
+# tetW tLURF 
+tetw_10foldCVtLURF_data <- data.frame(tetW_modelpreds = tetw_RFtuned2_10foldCV_predicted, 
+                   Observed_tetW = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$tetw_copiespm3.ln.diffmeth.mean)
+
+# Plots combined into one - E.coli training models
+ggplot(tetw_10foldCVLUR3_data, aes(x = tetW_modelpreds, y = Observed_tetW, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=tetw_10foldCVtLURF_data, aes(x=tetW_modelpreds, y=Observed_tetW, color = "tLURF"), shape=19, size= 3) +
+  xlab("10-fold CV model-predicted tetW DNA concentrations (ln copies/m^3)") +
+  ylab("Observed tetW DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "10-fold CV model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("tetW 10-fold CV model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+# mecA LUR3 
+meca_10foldCVLUR3_data <- data.frame(meca_modelpreds = meca_LUR3_10foldCV_preds, 
+                   Observed_meca = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$meca_copiespm3.ln.diffmeth.mean)
+
+# mecA tLURF 
+meca_10foldCVtLURF_data <- data.frame(meca_modelpreds = meca_RFtuned2_10foldCV_predicted, 
+                   Observed_meca = VGOB1_BioA_SiteAv_ExpoV_KeptN29_Tr_1P9_LUR3$meca_copiespm3.ln.diffmeth.mean)
+
+# Plots combined into one - mecA training models
+ggplot(meca_10foldCVLUR3_data, aes(x = meca_modelpreds, y = Observed_meca, color= "LUR3")) +
+  geom_point(shape=19, size= 3) +
+  geom_point(data=meca_10foldCVtLURF_data, aes(x=meca_modelpreds, y=Observed_meca, color = "tLURF"), shape=19, size= 3) +
+  xlab("10-fold CV model-predicted meca DNA concentrations (ln copies/m^3)") +
+  ylab("Observed meca DNA concentration (ln copies/m^3)") +
+  scale_color_manual(name = "10-fold CV model", values = c("LUR3"="orange", "tLURF"= "blue")) +
+  theme_classic()+ 
+  geom_abline() + 
+  ggtitle("mecA 10-fold CV model predictions versus observations") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+# Comparing LUR3 and RF predictions - correlation plots
+```{r}
+# # Checking that there are correlations between the SLR LUR-modelled E. coli and RF LUR-modelled E. coli concentrations
+corr.df.LURmodel.preds # this df contains the predictions from the SLR model 3 and tuned RF models for each of the markers
+SLR3_estims <- corr.df.LURmodel.preds[, c("E.coli_SLR.LUR3.estim", "Staph_SLR.LUR3.estim","tetW_SLR.LUR3.estim", "mecA_SLR.LUR3.estim")]
+tRF_estims <- corr.df.LURmodel.preds[, c("E.coli_tunedRF.LUR3.estim", "Staph_tunedRF.LUR3.estim","tetW_tunedRF.LUR3.estim", "mecA_tunedRF.LUR3.estim")]
+
+# Change the colnames so clear in correlation plot 
+colnames(SLR3_estims)<- c("E. coli LUR3 predictions","Staph LUR3 predictions","tetW LUR3 predictions","mecA LUR3 predictions")
+
+colnames(tRF_estims)<- c("E. coli tLURF model predictions" , "Staph tLURF model predictions" , "tetW tLURF model predictions" , "mecA tLURF model predictions")
+
+SLR3vsRF.corr.mat <- cor(tRF_estims, SLR3_estims)
+corrplot(SLR3vsRF.corr.mat, method = 'color',tl.col = "black", tl.srt = 45, tl.cex=0.5) # colorful number
+
+corrplot(SLR3vsRF.corr.mat, method="circle")
+
+corrplot(SLR3vsRF.corr.mat, method="number", type="upper")
+
+corrplot(SLR3vsRF.corr.mat, method = 'square', type = 'lower', insig='blank', addCoef.col ='black', number.cex = 1, diag=TRUE, tl.cex =0.8, tl.col = "black")
+
+corrplot(SLR3vsRF.corr.mat, method = 'square', type = 'full', insig='blank', addCoef.col ='black', number.cex = 1, diag=TRUE, tl.cex =0.8, tl.col = "black")
+
+
+# Could add p-values but all very significant so not of much benefit to present these? 
+# Insert p-values into the correlation plot
+library(Hmisc)
+tRF_estims <- as.matrix(tRF_estims)
+SLR3_estims <- as.matrix(SLR3_estims)
+
+SLR3vsRF.corr.pvals <- rcorr(tRF_estims,SLR3_estims, type = c("pearson"))
+# Extract the correlation coefficients
+SLR3vsRF.corr.pvals$P
+options(scipen = 0)
+# Can add p-values but not sure necessary for results table as all are v significant! 
+# For now I will jsut show the correlation coefficients
+# corrplot(SLR3vsRF.corr.mat, p.mat = SLR3vsRF.corr.pvals$P, method = 'circle', type = 'upper', insig='blank', addCoef.col ='black', number.cex = 0.2,  diag=TRUE, tl.cex = 0.7, tl.col = "black")
+```
