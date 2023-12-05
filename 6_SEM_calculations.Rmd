@@ -1,0 +1,1240 @@
+# Calculating SEM per site - post temporal correction
+```{r}
+# Read in the E.coli concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+ecoli_ln_tempcorr <- read.csv("Input_files\\VGOB1_ecoli_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+ecoli_ln_tempcorr$X <- NULL
+# Since there are about 4 measurements per site, I want to Create a function to calculate the standard error of mean for each site
+std <- function(x) sd(x)/sqrt(length(x))
+
+attach(ecoli_ln_tempcorr)
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==2])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==3])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==4])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==5])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==6])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==7])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==8])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==9])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==10]) # no site 10! 
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==11])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==12])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==13])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==14])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==15])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==16])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==17])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==18])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==19])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==20])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==21])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==22])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==23])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==24])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==25])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==26])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==27])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==28])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==29])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==30])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==31])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==32])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==33])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==34])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==35])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==36])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==37])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==38])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==39])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==40])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==41])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==42])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==43])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==44])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==45])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==46])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==47])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==48])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==49])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==50])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==51])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==52])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==53])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==54])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==55])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==56])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==57])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==58])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==59])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==60])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==61])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==62])
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+ecoli_site_SEM_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+ecoli_site_SEM_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+ecoli_site_SEM_df$site_ecoli_SEM <- c(
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==2]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==3]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==4]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==5]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==6]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==7]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==8]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==9]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==11]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==12]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==13]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==14]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==15]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==16]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==17]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==18]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==19]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==20]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==21]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==22]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==23]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==24]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==25]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==26]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==27]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==28]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==29]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==30]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==31]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==32]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==33]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==34]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==35]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==36]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==37]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==38]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==39]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==40]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==41]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==42]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==43]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==44]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==45]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==46]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==47]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==48]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==49]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==50]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==51]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==52]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==53]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==54]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==55]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==56]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==57]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==58]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==59]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==60]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==61]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==62]),
+std(ecoli_copiespm3.ln.diffmeth[Loc_ID==63]))
+
+ecoli_site_SEM_df <- subset(ecoli_site_SEM_df, select = -c(X1,X2) )
+rownames(ecoli_site_SEM_df) <- ecoli_site_SEM_df[,1]
+ecoli_site_SEM_df <- subset(ecoli_site_SEM_df, select = -c(site_ID) )
+
+summary(ecoli_site_SEM_df)
+# create dataframe with these standard errors 
+
+boxplot(ecoli_site_SEM_df,
+        ylab = "E. coli concentration SEM")
+
+# Create scatterplot of annual per site average E. coli concentration vs E. coli SEM per site
+plot(Measurement_data$ecoli_copiespm3.ln.diffmeth.mean, ecoli_site_SEM_df$site_ecoli_SEM, xlab = "Annual E. coli concentration (difference method)", ylab = "E. coli concentration SEM")
+abline(lm(ecoli_site_SEM_df$site_ecoli_SEM~Measurement_data$ecoli_copiespm3.ln.diffmeth.mean))
+
+# STAPH
+# Read in the Staph concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+staph_ln_tempcorr <- read.csv("Input_files\\VGOB1_staph_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+staph_ln_tempcorr$X <- NULL
+# Create a function to calculate the standard error of mean
+std <- function(x) sd(x)/sqrt(length(x))
+
+attach(staph_ln_tempcorr)
+std(staph_copiespm3.ln.diffmeth[Loc_ID==2])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==3])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==4])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==5])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==6])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==7])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==8])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==9])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==10]) # no site 10! 
+std(staph_copiespm3.ln.diffmeth[Loc_ID==11])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==12])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==13])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==14])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==15])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==16])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==17])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==18])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==19])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==20])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==21])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==22])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==23])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==24])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==25])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==26])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==27])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==28])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==29])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==30])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==31])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==32])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==33])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==34])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==35])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==36])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==37])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==38])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==39])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==40])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==41])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==42])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==43])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==44])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==45])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==46])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==47])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==48])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==49])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==50])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==51])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==52])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==53])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==54])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==55])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==56])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==57])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==58])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==59])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==60])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==61])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==62])
+std(staph_copiespm3.ln.diffmeth[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+staph_site_SEM_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+staph_site_SEM_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+staph_site_SEM_df$site_staph_SEM <- c(
+std(staph_copiespm3.ln.diffmeth[Loc_ID==2]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==3]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==4]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==5]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==6]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==7]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==8]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==9]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==11]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==12]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==13]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==14]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==15]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==16]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==17]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==18]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==19]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==20]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==21]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==22]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==23]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==24]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==25]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==26]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==27]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==28]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==29]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==30]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==31]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==32]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==33]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==34]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==35]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==36]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==37]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==38]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==39]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==40]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==41]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==42]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==43]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==44]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==45]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==46]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==47]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==48]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==49]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==50]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==51]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==52]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==53]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==54]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==55]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==56]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==57]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==58]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==59]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==60]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==61]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==62]),
+std(staph_copiespm3.ln.diffmeth[Loc_ID==63]))
+
+staph_site_SEM_df
+
+staph_site_SEM_df <- subset(staph_site_SEM_df, select = -c(X1,X2) )
+rownames(staph_site_SEM_df) <- staph_site_SEM_df[,1]
+staph_site_SEM_df <- subset(staph_site_SEM_df, select = -c(site_ID) )
+
+summary(staph_site_SEM_df)
+# create dataframe with these standard errors 
+
+boxplot(staph_site_SEM_df,
+        ylab = "Staph concentration SEM")
+
+# Create scatterplot of annual per site average Staph concentration vs Staph SEM per site
+plot(Measurement_data$staph_copiespm3.ln.diffmeth, staph_site_SEM_df$site_staph_SEM, xlab = "Annual average staph concentration (difference method)", ylab = "Staph concentration SEM")
+abline(lm(staph_site_SEM_df$site_staph_SEM~Measurement_data$staph_copiespm3.ln.diffmeth))
+
+# tetW
+# Read in the tetW concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+tetW_ln_tempcorr <- read.csv("Input_files\\VGOB1_tetw_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+tetW_ln_tempcorr$X <- NULL
+
+# Create a function to calculate the standard error of mean
+std <- function(x) sd(x)/sqrt(length(x))
+attach(tetW_ln_tempcorr)
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==2])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==3])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==4])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==5])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==6])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==7])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==8])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==9])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==10]) # no site 10! 
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==11])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==12])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==13])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==14])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==15])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==16])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==17])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==18])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==19])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==20])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==21])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==22])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==23])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==24])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==25])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==26])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==27])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==28])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==29])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==30])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==31])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==32])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==33])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==34])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==35])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==36])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==37])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==38])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==39])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==40])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==41])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==42])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==43])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==44])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==45])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==46])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==47])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==48])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==49])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==50])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==51])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==52])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==53])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==54])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==55])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==56])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==57])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==58])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==59])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==60])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==61])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==62])
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+tetW_site_SEM_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+tetW_site_SEM_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+tetW_site_SEM_df$site_tetW_SEM <- c(
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==2]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==3]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==4]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==5]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==6]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==7]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==8]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==9]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==11]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==12]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==13]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==14]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==15]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==16]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==17]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==18]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==19]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==20]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==21]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==22]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==23]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==24]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==25]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==26]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==27]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==28]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==29]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==30]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==31]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==32]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==33]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==34]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==35]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==36]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==37]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==38]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==39]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==40]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==41]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==42]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==43]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==44]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==45]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==46]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==47]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==48]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==49]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==50]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==51]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==52]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==53]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==54]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==55]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==56]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==57]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==58]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==59]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==60]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==61]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==62]),
+std(tetw_copiespm3.ln.diffmeth[Loc_ID==63]))
+
+tetW_site_SEM_df
+
+tetW_site_SEM_df <- subset(tetW_site_SEM_df, select = -c(X1,X2) )
+rownames(tetW_site_SEM_df) <- tetW_site_SEM_df[,1]
+tetW_site_SEM_df <- subset(tetW_site_SEM_df, select = -c(site_ID) )
+
+summary(tetW_site_SEM_df)
+# create dataframe with these standard errors 
+
+boxplot(tetW_site_SEM_df,
+        ylab = "tetW concentration SEM")
+
+# Create scatterplot of annual per site average tetW concentration vs tetW SEM per site
+plot(Measurement_data$tetw_copiespm3.ln.diffmeth, tetW_site_SEM_df$site_tetW_SEM, xlab = "Annual average tetW concentration (difference method)", ylab = "tetW concentration SEM")
+abline(lm(tetW_site_SEM_df$site_tetW_SEM~Measurement_data$tetw_copiespm3.ln.diffmeth))
+
+
+# mecA
+# Read in the mecA concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+mecA_ln_tempcorr <- read.csv("Input_files//VGOB1_meca_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+mecA_ln_tempcorr$X <- NULL
+# Create a function to calculate the standard error of mean
+std <- function(x) sd(x)/sqrt(length(x))
+attach(mecA_ln_tempcorr)
+std(meca_copiespm3.ln.diffmeth[Loc_ID==2])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==3])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==4])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==5])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==6])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==7])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==8])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==9])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==10]) # no site 10! 
+std(meca_copiespm3.ln.diffmeth[Loc_ID==11])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==12])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==13])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==14])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==15])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==16])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==17])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==18])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==19])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==20])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==21])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==22])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==23])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==24])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==25])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==26])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==27])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==28])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==29])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==30])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==31])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==32])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==33])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==34])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==35])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==36])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==37])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==38])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==39])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==40])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==41])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==42])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==43])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==44])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==45])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==46])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==47])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==48])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==49])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==50])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==51])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==52])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==53])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==54])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==55])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==56])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==57])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==58])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==59])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==60])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==61])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==62])
+std(meca_copiespm3.ln.diffmeth[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+mecA_site_SEM_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+mecA_site_SEM_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+mecA_site_SEM_df$site_mecA_SEM <- c(
+std(meca_copiespm3.ln.diffmeth[Loc_ID==2]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==3]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==4]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==5]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==6]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==7]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==8]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==9]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==11]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==12]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==13]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==14]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==15]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==16]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==17]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==18]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==19]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==20]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==21]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==22]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==23]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==24]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==25]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==26]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==27]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==28]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==29]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==30]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==31]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==32]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==33]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==34]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==35]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==36]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==37]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==38]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==39]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==40]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==41]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==42]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==43]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==44]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==45]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==46]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==47]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==48]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==49]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==50]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==51]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==52]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==53]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==54]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==55]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==56]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==57]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==58]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==59]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==60]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==61]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==62]),
+std(meca_copiespm3.ln.diffmeth[Loc_ID==63]))
+
+mecA_site_SEM_df
+
+mecA_site_SEM_df <- subset(mecA_site_SEM_df, select = -c(X1,X2) )
+rownames(mecA_site_SEM_df) <- mecA_site_SEM_df[,1]
+mecA_site_SEM_df <- subset(mecA_site_SEM_df, select = -c(site_ID) )
+
+summary(mecA_site_SEM_df)
+# create dataframe with these standard errors 
+
+boxplot(mecA_site_SEM_df,
+        ylab = "mecA concentration SEM")
+
+plot(Measurement_data$meca_copiespm3.ln.diffmeth, mecA_site_SEM_df$site_mecA_SEM, xlab = "Annual average mecA concentration (difference method)", ylab = "mecA concentration SEM")
+abline(lm(mecA_site_SEM_df$site_mecA_SEM~Measurement_data$meca_copiespm3.ln.diffmeth))
+
+# Mean SEM vs mean and median annual average concentrations
+# For e.coli
+(mean(ecoli_site_SEM_df$site_ecoli_SEM)/ mean(Measurement_data$ecoli_copiespm3.ln.diffmeth)) * 100
+(median(ecoli_site_SEM_df$site_ecoli_SEM)/ median(Measurement_data$ecoli_copiespm3.ln.diffmeth)) * 100
+
+# For staph
+(mean(staph_site_SEM_df$site_staph_SEM)/ mean(Measurement_data$staph_copiespm3.ln.diffmeth)) * 100
+(median(staph_site_SEM_df$site_staph_SEM)/ median(Measurement_data$staph_copiespm3.ln.diffmeth)) * 100
+
+# For tetW
+(mean(tetW_site_SEM_df$site_tetW_SEM)/ mean(Measurement_data$tetw_copiespm3.ln.diffmeth)) * 100
+(median(tetW_site_SEM_df$site_tetW_SEM)/ median(Measurement_data$tetw_copiespm3.ln.diffmeth)) * 100
+
+# For mecA
+(mean(mecA_site_SEM_df$site_mecA_SEM)/ mean(Measurement_data$meca_copiespm3.ln.diffmeth)) * 100
+(median(mecA_site_SEM_df$site_mecA_SEM)/ median(Measurement_data$meca_copiespm3.ln.diffmeth)) * 100
+
+# Mean SEM / mean annual average concentration * 100
+ecoli.boxplot <-ggplot(ecoli_site_SEM_df, aes(x=NULL, y=site_ecoli_SEM)) +
+  geom_boxplot(fill="red", alpha=0.2) + 
+    xlab("")
+```
+# Calculating SEM per site - pre-temporal correction
+```{r}
+# Read in the E.coli concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+ecoli_ln_nontempcorr <- read.csv("Input_files\\VGOB1_ecoli_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+ecoli_ln_tempcorr$X <- NULL
+# Since there are about 4 measurements per site, I want to Create a function to calculate the standard error of mean for each site
+std <- function(x) sd(x)/sqrt(length(x))
+
+ecoli_ln_tempcorr$ecoli_copiespm3.ln # This column contains the ecoli concentrations which have been ln-transformed but not temporally corrected
+attach(ecoli_ln_nontempcorr)
+std(ecoli_copiespm3.ln[Loc_ID==2])
+std(ecoli_copiespm3.ln[Loc_ID==3])
+std(ecoli_copiespm3.ln[Loc_ID==4])
+std(ecoli_copiespm3.ln[Loc_ID==5])
+std(ecoli_copiespm3.ln[Loc_ID==6])
+std(ecoli_copiespm3.ln[Loc_ID==7])
+std(ecoli_copiespm3.ln[Loc_ID==8])
+std(ecoli_copiespm3.ln[Loc_ID==9])
+std(ecoli_copiespm3.ln[Loc_ID==10]) # no site 10! 
+std(ecoli_copiespm3.ln[Loc_ID==11])
+std(ecoli_copiespm3.ln[Loc_ID==12])
+std(ecoli_copiespm3.ln[Loc_ID==13])
+std(ecoli_copiespm3.ln[Loc_ID==14])
+std(ecoli_copiespm3.ln[Loc_ID==15])
+std(ecoli_copiespm3.ln[Loc_ID==16])
+std(ecoli_copiespm3.ln[Loc_ID==17])
+std(ecoli_copiespm3.ln[Loc_ID==18])
+std(ecoli_copiespm3.ln[Loc_ID==19])
+std(ecoli_copiespm3.ln[Loc_ID==20])
+std(ecoli_copiespm3.ln[Loc_ID==21])
+std(ecoli_copiespm3.ln[Loc_ID==22])
+std(ecoli_copiespm3.ln[Loc_ID==23])
+std(ecoli_copiespm3.ln[Loc_ID==24])
+std(ecoli_copiespm3.ln[Loc_ID==25])
+std(ecoli_copiespm3.ln[Loc_ID==26])
+std(ecoli_copiespm3.ln[Loc_ID==27])
+std(ecoli_copiespm3.ln[Loc_ID==28])
+std(ecoli_copiespm3.ln[Loc_ID==29])
+std(ecoli_copiespm3.ln[Loc_ID==30])
+std(ecoli_copiespm3.ln[Loc_ID==31])
+std(ecoli_copiespm3.ln[Loc_ID==32])
+std(ecoli_copiespm3.ln[Loc_ID==33])
+std(ecoli_copiespm3.ln[Loc_ID==34])
+std(ecoli_copiespm3.ln[Loc_ID==35])
+std(ecoli_copiespm3.ln[Loc_ID==36])
+std(ecoli_copiespm3.ln[Loc_ID==37])
+std(ecoli_copiespm3.ln[Loc_ID==38])
+std(ecoli_copiespm3.ln[Loc_ID==39])
+std(ecoli_copiespm3.ln[Loc_ID==40])
+std(ecoli_copiespm3.ln[Loc_ID==41])
+std(ecoli_copiespm3.ln[Loc_ID==42])
+std(ecoli_copiespm3.ln[Loc_ID==43])
+std(ecoli_copiespm3.ln[Loc_ID==44])
+std(ecoli_copiespm3.ln[Loc_ID==45])
+std(ecoli_copiespm3.ln[Loc_ID==46])
+std(ecoli_copiespm3.ln[Loc_ID==47])
+std(ecoli_copiespm3.ln[Loc_ID==48])
+std(ecoli_copiespm3.ln[Loc_ID==49])
+std(ecoli_copiespm3.ln[Loc_ID==50])
+std(ecoli_copiespm3.ln[Loc_ID==51])
+std(ecoli_copiespm3.ln[Loc_ID==52])
+std(ecoli_copiespm3.ln[Loc_ID==53])
+std(ecoli_copiespm3.ln[Loc_ID==54])
+std(ecoli_copiespm3.ln[Loc_ID==55])
+std(ecoli_copiespm3.ln[Loc_ID==56])
+std(ecoli_copiespm3.ln[Loc_ID==57])
+std(ecoli_copiespm3.ln[Loc_ID==58])
+std(ecoli_copiespm3.ln[Loc_ID==59])
+std(ecoli_copiespm3.ln[Loc_ID==60])
+std(ecoli_copiespm3.ln[Loc_ID==61])
+std(ecoli_copiespm3.ln[Loc_ID==62])
+std(ecoli_copiespm3.ln[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+ecoli_site_SEM_no_tempcorr_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+ecoli_site_SEM_no_tempcorr_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+ecoli_site_SEM_no_tempcorr_df$site_ecoli_SEM <- c(
+std(ecoli_copiespm3.ln[Loc_ID==2]),
+std(ecoli_copiespm3.ln[Loc_ID==3]),
+std(ecoli_copiespm3.ln[Loc_ID==4]),
+std(ecoli_copiespm3.ln[Loc_ID==5]),
+std(ecoli_copiespm3.ln[Loc_ID==6]),
+std(ecoli_copiespm3.ln[Loc_ID==7]),
+std(ecoli_copiespm3.ln[Loc_ID==8]),
+std(ecoli_copiespm3.ln[Loc_ID==9]),
+std(ecoli_copiespm3.ln[Loc_ID==11]),
+std(ecoli_copiespm3.ln[Loc_ID==12]),
+std(ecoli_copiespm3.ln[Loc_ID==13]),
+std(ecoli_copiespm3.ln[Loc_ID==14]),
+std(ecoli_copiespm3.ln[Loc_ID==15]),
+std(ecoli_copiespm3.ln[Loc_ID==16]),
+std(ecoli_copiespm3.ln[Loc_ID==17]),
+std(ecoli_copiespm3.ln[Loc_ID==18]),
+std(ecoli_copiespm3.ln[Loc_ID==19]),
+std(ecoli_copiespm3.ln[Loc_ID==20]),
+std(ecoli_copiespm3.ln[Loc_ID==21]),
+std(ecoli_copiespm3.ln[Loc_ID==22]),
+std(ecoli_copiespm3.ln[Loc_ID==23]),
+std(ecoli_copiespm3.ln[Loc_ID==24]),
+std(ecoli_copiespm3.ln[Loc_ID==25]),
+std(ecoli_copiespm3.ln[Loc_ID==26]),
+std(ecoli_copiespm3.ln[Loc_ID==27]),
+std(ecoli_copiespm3.ln[Loc_ID==28]),
+std(ecoli_copiespm3.ln[Loc_ID==29]),
+std(ecoli_copiespm3.ln[Loc_ID==30]),
+std(ecoli_copiespm3.ln[Loc_ID==31]),
+std(ecoli_copiespm3.ln[Loc_ID==32]),
+std(ecoli_copiespm3.ln[Loc_ID==33]),
+std(ecoli_copiespm3.ln[Loc_ID==34]),
+std(ecoli_copiespm3.ln[Loc_ID==35]),
+std(ecoli_copiespm3.ln[Loc_ID==36]),
+std(ecoli_copiespm3.ln[Loc_ID==37]),
+std(ecoli_copiespm3.ln[Loc_ID==38]),
+std(ecoli_copiespm3.ln[Loc_ID==39]),
+std(ecoli_copiespm3.ln[Loc_ID==40]),
+std(ecoli_copiespm3.ln[Loc_ID==41]),
+std(ecoli_copiespm3.ln[Loc_ID==42]),
+std(ecoli_copiespm3.ln[Loc_ID==43]),
+std(ecoli_copiespm3.ln[Loc_ID==44]),
+std(ecoli_copiespm3.ln[Loc_ID==45]),
+std(ecoli_copiespm3.ln[Loc_ID==46]),
+std(ecoli_copiespm3.ln[Loc_ID==47]),
+std(ecoli_copiespm3.ln[Loc_ID==48]),
+std(ecoli_copiespm3.ln[Loc_ID==49]),
+std(ecoli_copiespm3.ln[Loc_ID==50]),
+std(ecoli_copiespm3.ln[Loc_ID==51]),
+std(ecoli_copiespm3.ln[Loc_ID==52]),
+std(ecoli_copiespm3.ln[Loc_ID==53]),
+std(ecoli_copiespm3.ln[Loc_ID==54]),
+std(ecoli_copiespm3.ln[Loc_ID==55]),
+std(ecoli_copiespm3.ln[Loc_ID==56]),
+std(ecoli_copiespm3.ln[Loc_ID==57]),
+std(ecoli_copiespm3.ln[Loc_ID==58]),
+std(ecoli_copiespm3.ln[Loc_ID==59]),
+std(ecoli_copiespm3.ln[Loc_ID==60]),
+std(ecoli_copiespm3.ln[Loc_ID==61]),
+std(ecoli_copiespm3.ln[Loc_ID==62]),
+std(ecoli_copiespm3.ln[Loc_ID==63]))
+
+ecoli_site_SEM_no_tempcorr_df <- subset(ecoli_site_SEM_no_tempcorr_df, select = -c(X1,X2) )
+rownames(ecoli_site_SEM_no_tempcorr_df) <- ecoli_site_SEM_no_tempcorr_df[,1]
+ecoli_site_SEM_no_tempcorr_df <- subset(ecoli_site_SEM_no_tempcorr_df, select = -c(site_ID) )
+
+summary(ecoli_site_SEM_no_tempcorr_df)
+# create dataframe with these standard errors 
+
+boxplot(ecoli_site_SEM_no_tempcorr_df,
+        ylab = "E. coli concentration SEM")
+
+
+# STAPH
+# Read in the Staph concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+staph_ln_nontempcorr <- read.csv("Input_files\\VGOB1_staph_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+staph_ln_nontempcorr$X <- NULL
+# Create a function to calculate the standard error of mean
+std <- function(x) sd(x)/sqrt(length(x))
+staph_ln_nontempcorr$staph_copiespm3.ln # these are the non-temporally corrected concentrations (ln-transformed)
+attach(staph_ln_nontempcorr)
+std(staph_copiespm3.ln[Loc_ID==2])
+std(staph_copiespm3.ln[Loc_ID==3])
+std(staph_copiespm3.ln[Loc_ID==4])
+std(staph_copiespm3.ln[Loc_ID==5])
+std(staph_copiespm3.ln[Loc_ID==6])
+std(staph_copiespm3.ln[Loc_ID==7])
+std(staph_copiespm3.ln[Loc_ID==8])
+std(staph_copiespm3.ln[Loc_ID==9])
+std(staph_copiespm3.ln[Loc_ID==10]) # no site 10! 
+std(staph_copiespm3.ln[Loc_ID==11])
+std(staph_copiespm3.ln[Loc_ID==12])
+std(staph_copiespm3.ln[Loc_ID==13])
+std(staph_copiespm3.ln[Loc_ID==14])
+std(staph_copiespm3.ln[Loc_ID==15])
+std(staph_copiespm3.ln[Loc_ID==16])
+std(staph_copiespm3.ln[Loc_ID==17])
+std(staph_copiespm3.ln[Loc_ID==18])
+std(staph_copiespm3.ln[Loc_ID==19])
+std(staph_copiespm3.ln[Loc_ID==20])
+std(staph_copiespm3.ln[Loc_ID==21])
+std(staph_copiespm3.ln[Loc_ID==22])
+std(staph_copiespm3.ln[Loc_ID==23])
+std(staph_copiespm3.ln[Loc_ID==24])
+std(staph_copiespm3.ln[Loc_ID==25])
+std(staph_copiespm3.ln[Loc_ID==26])
+std(staph_copiespm3.ln[Loc_ID==27])
+std(staph_copiespm3.ln[Loc_ID==28])
+std(staph_copiespm3.ln[Loc_ID==29])
+std(staph_copiespm3.ln[Loc_ID==30])
+std(staph_copiespm3.ln[Loc_ID==31])
+std(staph_copiespm3.ln[Loc_ID==32])
+std(staph_copiespm3.ln[Loc_ID==33])
+std(staph_copiespm3.ln[Loc_ID==34])
+std(staph_copiespm3.ln[Loc_ID==35])
+std(staph_copiespm3.ln[Loc_ID==36])
+std(staph_copiespm3.ln[Loc_ID==37])
+std(staph_copiespm3.ln[Loc_ID==38])
+std(staph_copiespm3.ln[Loc_ID==39])
+std(staph_copiespm3.ln[Loc_ID==40])
+std(staph_copiespm3.ln[Loc_ID==41])
+std(staph_copiespm3.ln[Loc_ID==42])
+std(staph_copiespm3.ln[Loc_ID==43])
+std(staph_copiespm3.ln[Loc_ID==44])
+std(staph_copiespm3.ln[Loc_ID==45])
+std(staph_copiespm3.ln[Loc_ID==46])
+std(staph_copiespm3.ln[Loc_ID==47])
+std(staph_copiespm3.ln[Loc_ID==48])
+std(staph_copiespm3.ln[Loc_ID==49])
+std(staph_copiespm3.ln[Loc_ID==50])
+std(staph_copiespm3.ln[Loc_ID==51])
+std(staph_copiespm3.ln[Loc_ID==52])
+std(staph_copiespm3.ln[Loc_ID==53])
+std(staph_copiespm3.ln[Loc_ID==54])
+std(staph_copiespm3.ln[Loc_ID==55])
+std(staph_copiespm3.ln[Loc_ID==56])
+std(staph_copiespm3.ln[Loc_ID==57])
+std(staph_copiespm3.ln[Loc_ID==58])
+std(staph_copiespm3.ln[Loc_ID==59])
+std(staph_copiespm3.ln[Loc_ID==60])
+std(staph_copiespm3.ln[Loc_ID==61])
+std(staph_copiespm3.ln[Loc_ID==62])
+std(staph_copiespm3.ln[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+staph_site_SEM_no_tempcorr_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+staph_site_SEM_no_tempcorr_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+staph_site_SEM_no_tempcorr_df$site_staph_SEM <- c(
+std(staph_copiespm3.ln[Loc_ID==2]),
+std(staph_copiespm3.ln[Loc_ID==3]),
+std(staph_copiespm3.ln[Loc_ID==4]),
+std(staph_copiespm3.ln[Loc_ID==5]),
+std(staph_copiespm3.ln[Loc_ID==6]),
+std(staph_copiespm3.ln[Loc_ID==7]),
+std(staph_copiespm3.ln[Loc_ID==8]),
+std(staph_copiespm3.ln[Loc_ID==9]),
+std(staph_copiespm3.ln[Loc_ID==11]),
+std(staph_copiespm3.ln[Loc_ID==12]),
+std(staph_copiespm3.ln[Loc_ID==13]),
+std(staph_copiespm3.ln[Loc_ID==14]),
+std(staph_copiespm3.ln[Loc_ID==15]),
+std(staph_copiespm3.ln[Loc_ID==16]),
+std(staph_copiespm3.ln[Loc_ID==17]),
+std(staph_copiespm3.ln[Loc_ID==18]),
+std(staph_copiespm3.ln[Loc_ID==19]),
+std(staph_copiespm3.ln[Loc_ID==20]),
+std(staph_copiespm3.ln[Loc_ID==21]),
+std(staph_copiespm3.ln[Loc_ID==22]),
+std(staph_copiespm3.ln[Loc_ID==23]),
+std(staph_copiespm3.ln[Loc_ID==24]),
+std(staph_copiespm3.ln[Loc_ID==25]),
+std(staph_copiespm3.ln[Loc_ID==26]),
+std(staph_copiespm3.ln[Loc_ID==27]),
+std(staph_copiespm3.ln[Loc_ID==28]),
+std(staph_copiespm3.ln[Loc_ID==29]),
+std(staph_copiespm3.ln[Loc_ID==30]),
+std(staph_copiespm3.ln[Loc_ID==31]),
+std(staph_copiespm3.ln[Loc_ID==32]),
+std(staph_copiespm3.ln[Loc_ID==33]),
+std(staph_copiespm3.ln[Loc_ID==34]),
+std(staph_copiespm3.ln[Loc_ID==35]),
+std(staph_copiespm3.ln[Loc_ID==36]),
+std(staph_copiespm3.ln[Loc_ID==37]),
+std(staph_copiespm3.ln[Loc_ID==38]),
+std(staph_copiespm3.ln[Loc_ID==39]),
+std(staph_copiespm3.ln[Loc_ID==40]),
+std(staph_copiespm3.ln[Loc_ID==41]),
+std(staph_copiespm3.ln[Loc_ID==42]),
+std(staph_copiespm3.ln[Loc_ID==43]),
+std(staph_copiespm3.ln[Loc_ID==44]),
+std(staph_copiespm3.ln[Loc_ID==45]),
+std(staph_copiespm3.ln[Loc_ID==46]),
+std(staph_copiespm3.ln[Loc_ID==47]),
+std(staph_copiespm3.ln[Loc_ID==48]),
+std(staph_copiespm3.ln[Loc_ID==49]),
+std(staph_copiespm3.ln[Loc_ID==50]),
+std(staph_copiespm3.ln[Loc_ID==51]),
+std(staph_copiespm3.ln[Loc_ID==52]),
+std(staph_copiespm3.ln[Loc_ID==53]),
+std(staph_copiespm3.ln[Loc_ID==54]),
+std(staph_copiespm3.ln[Loc_ID==55]),
+std(staph_copiespm3.ln[Loc_ID==56]),
+std(staph_copiespm3.ln[Loc_ID==57]),
+std(staph_copiespm3.ln[Loc_ID==58]),
+std(staph_copiespm3.ln[Loc_ID==59]),
+std(staph_copiespm3.ln[Loc_ID==60]),
+std(staph_copiespm3.ln[Loc_ID==61]),
+std(staph_copiespm3.ln[Loc_ID==62]),
+std(staph_copiespm3.ln[Loc_ID==63]))
+
+staph_site_SEM_no_tempcorr_df
+
+staph_site_SEM_no_tempcorr_df <- subset(staph_site_SEM_no_tempcorr_df, select = -c(X1,X2) )
+rownames(staph_site_SEM_no_tempcorr_df) <- staph_site_SEM_no_tempcorr_df[,1]
+staph_site_SEM_no_tempcorr_df <- subset(staph_site_SEM_no_tempcorr_df, select = -c(site_ID) )
+
+summary(staph_site_SEM_no_tempcorr_df)
+# create dataframe with these standard errors 
+
+boxplot(staph_site_SEM_df,
+        ylab = "Staph concentration SEM")
+
+
+# tetW
+# Read in the tetW concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+tetW_ln_nontempcorr <- read.csv("Input_files\\VGOB1_tetw_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+tetW_ln_nontempcorr$X <- NULL
+tetW_ln_nontempcorr$tetw_copiespm3.ln # these are the non-temporally corrected concentrations (ln-transformed)
+# Create a function to calculate the standard error of mean
+std <- function(x) sd(x)/sqrt(length(x))
+attach(tetW_ln_nontempcorr)
+std(tetw_copiespm3.ln[Loc_ID==2])
+std(tetw_copiespm3.ln[Loc_ID==3])
+std(tetw_copiespm3.ln[Loc_ID==4])
+std(tetw_copiespm3.ln[Loc_ID==5])
+std(tetw_copiespm3.ln[Loc_ID==6])
+std(tetw_copiespm3.ln[Loc_ID==7])
+std(tetw_copiespm3.ln[Loc_ID==8])
+std(tetw_copiespm3.ln[Loc_ID==9])
+std(tetw_copiespm3.ln[Loc_ID==10]) # no site 10! 
+std(tetw_copiespm3.ln[Loc_ID==11])
+std(tetw_copiespm3.ln[Loc_ID==12])
+std(tetw_copiespm3.ln[Loc_ID==13])
+std(tetw_copiespm3.ln[Loc_ID==14])
+std(tetw_copiespm3.ln[Loc_ID==15])
+std(tetw_copiespm3.ln[Loc_ID==16])
+std(tetw_copiespm3.ln[Loc_ID==17])
+std(tetw_copiespm3.ln[Loc_ID==18])
+std(tetw_copiespm3.ln[Loc_ID==19])
+std(tetw_copiespm3.ln[Loc_ID==20])
+std(tetw_copiespm3.ln[Loc_ID==21])
+std(tetw_copiespm3.ln[Loc_ID==22])
+std(tetw_copiespm3.ln[Loc_ID==23])
+std(tetw_copiespm3.ln[Loc_ID==24])
+std(tetw_copiespm3.ln[Loc_ID==25])
+std(tetw_copiespm3.ln[Loc_ID==26])
+std(tetw_copiespm3.ln[Loc_ID==27])
+std(tetw_copiespm3.ln[Loc_ID==28])
+std(tetw_copiespm3.ln[Loc_ID==29])
+std(tetw_copiespm3.ln[Loc_ID==30])
+std(tetw_copiespm3.ln[Loc_ID==31])
+std(tetw_copiespm3.ln[Loc_ID==32])
+std(tetw_copiespm3.ln[Loc_ID==33])
+std(tetw_copiespm3.ln[Loc_ID==34])
+std(tetw_copiespm3.ln[Loc_ID==35])
+std(tetw_copiespm3.ln[Loc_ID==36])
+std(tetw_copiespm3.ln[Loc_ID==37])
+std(tetw_copiespm3.ln[Loc_ID==38])
+std(tetw_copiespm3.ln[Loc_ID==39])
+std(tetw_copiespm3.ln[Loc_ID==40])
+std(tetw_copiespm3.ln[Loc_ID==41])
+std(tetw_copiespm3.ln[Loc_ID==42])
+std(tetw_copiespm3.ln[Loc_ID==43])
+std(tetw_copiespm3.ln[Loc_ID==44])
+std(tetw_copiespm3.ln[Loc_ID==45])
+std(tetw_copiespm3.ln[Loc_ID==46])
+std(tetw_copiespm3.ln[Loc_ID==47])
+std(tetw_copiespm3.ln[Loc_ID==48])
+std(tetw_copiespm3.ln[Loc_ID==49])
+std(tetw_copiespm3.ln[Loc_ID==50])
+std(tetw_copiespm3.ln[Loc_ID==51])
+std(tetw_copiespm3.ln[Loc_ID==52])
+std(tetw_copiespm3.ln[Loc_ID==53])
+std(tetw_copiespm3.ln[Loc_ID==54])
+std(tetw_copiespm3.ln[Loc_ID==55])
+std(tetw_copiespm3.ln[Loc_ID==56])
+std(tetw_copiespm3.ln[Loc_ID==57])
+std(tetw_copiespm3.ln[Loc_ID==58])
+std(tetw_copiespm3.ln[Loc_ID==59])
+std(tetw_copiespm3.ln[Loc_ID==60])
+std(tetw_copiespm3.ln[Loc_ID==61])
+std(tetw_copiespm3.ln[Loc_ID==62])
+std(tetw_copiespm3.ln[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+tetW_site_SEM_no_tempcorr_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+tetW_site_SEM_no_tempcorr_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+
+tetW_site_SEM_no_tempcorr_df$site_tetW_SEM <- c(
+std(tetw_copiespm3.ln[Loc_ID==2]),
+std(tetw_copiespm3.ln[Loc_ID==3]),
+std(tetw_copiespm3.ln[Loc_ID==4]),
+std(tetw_copiespm3.ln[Loc_ID==5]),
+std(tetw_copiespm3.ln[Loc_ID==6]),
+std(tetw_copiespm3.ln[Loc_ID==7]),
+std(tetw_copiespm3.ln[Loc_ID==8]),
+std(tetw_copiespm3.ln[Loc_ID==9]),
+std(tetw_copiespm3.ln[Loc_ID==11]),
+std(tetw_copiespm3.ln[Loc_ID==12]),
+std(tetw_copiespm3.ln[Loc_ID==13]),
+std(tetw_copiespm3.ln[Loc_ID==14]),
+std(tetw_copiespm3.ln[Loc_ID==15]),
+std(tetw_copiespm3.ln[Loc_ID==16]),
+std(tetw_copiespm3.ln[Loc_ID==17]),
+std(tetw_copiespm3.ln[Loc_ID==18]),
+std(tetw_copiespm3.ln[Loc_ID==19]),
+std(tetw_copiespm3.ln[Loc_ID==20]),
+std(tetw_copiespm3.ln[Loc_ID==21]),
+std(tetw_copiespm3.ln[Loc_ID==22]),
+std(tetw_copiespm3.ln[Loc_ID==23]),
+std(tetw_copiespm3.ln[Loc_ID==24]),
+std(tetw_copiespm3.ln[Loc_ID==25]),
+std(tetw_copiespm3.ln[Loc_ID==26]),
+std(tetw_copiespm3.ln[Loc_ID==27]),
+std(tetw_copiespm3.ln[Loc_ID==28]),
+std(tetw_copiespm3.ln[Loc_ID==29]),
+std(tetw_copiespm3.ln[Loc_ID==30]),
+std(tetw_copiespm3.ln[Loc_ID==31]),
+std(tetw_copiespm3.ln[Loc_ID==32]),
+std(tetw_copiespm3.ln[Loc_ID==33]),
+std(tetw_copiespm3.ln[Loc_ID==34]),
+std(tetw_copiespm3.ln[Loc_ID==35]),
+std(tetw_copiespm3.ln[Loc_ID==36]),
+std(tetw_copiespm3.ln[Loc_ID==37]),
+std(tetw_copiespm3.ln[Loc_ID==38]),
+std(tetw_copiespm3.ln[Loc_ID==39]),
+std(tetw_copiespm3.ln[Loc_ID==40]),
+std(tetw_copiespm3.ln[Loc_ID==41]),
+std(tetw_copiespm3.ln[Loc_ID==42]),
+std(tetw_copiespm3.ln[Loc_ID==43]),
+std(tetw_copiespm3.ln[Loc_ID==44]),
+std(tetw_copiespm3.ln[Loc_ID==45]),
+std(tetw_copiespm3.ln[Loc_ID==46]),
+std(tetw_copiespm3.ln[Loc_ID==47]),
+std(tetw_copiespm3.ln[Loc_ID==48]),
+std(tetw_copiespm3.ln[Loc_ID==49]),
+std(tetw_copiespm3.ln[Loc_ID==50]),
+std(tetw_copiespm3.ln[Loc_ID==51]),
+std(tetw_copiespm3.ln[Loc_ID==52]),
+std(tetw_copiespm3.ln[Loc_ID==53]),
+std(tetw_copiespm3.ln[Loc_ID==54]),
+std(tetw_copiespm3.ln[Loc_ID==55]),
+std(tetw_copiespm3.ln[Loc_ID==56]),
+std(tetw_copiespm3.ln[Loc_ID==57]),
+std(tetw_copiespm3.ln[Loc_ID==58]),
+std(tetw_copiespm3.ln[Loc_ID==59]),
+std(tetw_copiespm3.ln[Loc_ID==60]),
+std(tetw_copiespm3.ln[Loc_ID==61]),
+std(tetw_copiespm3.ln[Loc_ID==62]),
+std(tetw_copiespm3.ln[Loc_ID==63]))
+
+tetW_site_SEM_no_tempcorr_df
+
+tetW_site_SEM_no_tempcorr_df <- subset(tetW_site_SEM_no_tempcorr_df, select = -c(X1,X2) )
+rownames(tetW_site_SEM_no_tempcorr_df) <- tetW_site_SEM_no_tempcorr_df[,1]
+tetW_site_SEM_no_tempcorr_df <- subset(tetW_site_SEM_no_tempcorr_df, select = -c(site_ID) )
+
+summary(tetW_site_SEM_no_tempcorr_df)
+# create dataframe with these standard errors 
+
+boxplot(tetW_site_SEM_df,
+        ylab = "tetW concentration SEM")
+
+
+# mecA
+# Read in the mecA concentrations (temporally corrected and ln transformed, not averaged i.e. around 4 measurements per site)
+mecA_ln_nontempcorr <- read.csv("Input_files//VGOB1_meca_indiv_diffmeth.csv") 
+# remove column labelled 'x' so that the first column is now the location ID
+mecA_ln_nontempcorr$X <- NULL
+# Create a function to calculate the standard error of mean
+std <- function(x) sd(x)/sqrt(length(x))
+attach(mecA_ln_nontempcorr)
+std(meca_copiespm3.ln[Loc_ID==2])
+std(meca_copiespm3.ln[Loc_ID==3])
+std(meca_copiespm3.ln[Loc_ID==4])
+std(meca_copiespm3.ln[Loc_ID==5])
+std(meca_copiespm3.ln[Loc_ID==6])
+std(meca_copiespm3.ln[Loc_ID==7])
+std(meca_copiespm3.ln[Loc_ID==8])
+std(meca_copiespm3.ln[Loc_ID==9])
+std(meca_copiespm3.ln[Loc_ID==10]) # no site 10! 
+std(meca_copiespm3.ln[Loc_ID==11])
+std(meca_copiespm3.ln[Loc_ID==12])
+std(meca_copiespm3.ln[Loc_ID==13])
+std(meca_copiespm3.ln[Loc_ID==14])
+std(meca_copiespm3.ln[Loc_ID==15])
+std(meca_copiespm3.ln[Loc_ID==16])
+std(meca_copiespm3.ln[Loc_ID==17])
+std(meca_copiespm3.ln[Loc_ID==18])
+std(meca_copiespm3.ln[Loc_ID==19])
+std(meca_copiespm3.ln[Loc_ID==20])
+std(meca_copiespm3.ln[Loc_ID==21])
+std(meca_copiespm3.ln[Loc_ID==22])
+std(meca_copiespm3.ln[Loc_ID==23])
+std(meca_copiespm3.ln[Loc_ID==24])
+std(meca_copiespm3.ln[Loc_ID==25])
+std(meca_copiespm3.ln[Loc_ID==26])
+std(meca_copiespm3.ln[Loc_ID==27])
+std(meca_copiespm3.ln[Loc_ID==28])
+std(meca_copiespm3.ln[Loc_ID==29])
+std(meca_copiespm3.ln[Loc_ID==30])
+std(meca_copiespm3.ln[Loc_ID==31])
+std(meca_copiespm3.ln[Loc_ID==32])
+std(meca_copiespm3.ln[Loc_ID==33])
+std(meca_copiespm3.ln[Loc_ID==34])
+std(meca_copiespm3.ln[Loc_ID==35])
+std(meca_copiespm3.ln[Loc_ID==36])
+std(meca_copiespm3.ln[Loc_ID==37])
+std(meca_copiespm3.ln[Loc_ID==38])
+std(meca_copiespm3.ln[Loc_ID==39])
+std(meca_copiespm3.ln[Loc_ID==40])
+std(meca_copiespm3.ln[Loc_ID==41])
+std(meca_copiespm3.ln[Loc_ID==42])
+std(meca_copiespm3.ln[Loc_ID==43])
+std(meca_copiespm3.ln[Loc_ID==44])
+std(meca_copiespm3.ln[Loc_ID==45])
+std(meca_copiespm3.ln[Loc_ID==46])
+std(meca_copiespm3.ln[Loc_ID==47])
+std(meca_copiespm3.ln[Loc_ID==48])
+std(meca_copiespm3.ln[Loc_ID==49])
+std(meca_copiespm3.ln[Loc_ID==50])
+std(meca_copiespm3.ln[Loc_ID==51])
+std(meca_copiespm3.ln[Loc_ID==52])
+std(meca_copiespm3.ln[Loc_ID==53])
+std(meca_copiespm3.ln[Loc_ID==54])
+std(meca_copiespm3.ln[Loc_ID==55])
+std(meca_copiespm3.ln[Loc_ID==56])
+std(meca_copiespm3.ln[Loc_ID==57])
+std(meca_copiespm3.ln[Loc_ID==58])
+std(meca_copiespm3.ln[Loc_ID==59])
+std(meca_copiespm3.ln[Loc_ID==60])
+std(meca_copiespm3.ln[Loc_ID==61])
+std(meca_copiespm3.ln[Loc_ID==62])
+std(meca_copiespm3.ln[Loc_ID==63])
+
+siteIDs <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+mecA_site_SEM_no_tempcorr_df <- data.frame(matrix(ncol = 2, nrow = 61 ))
+mecA_site_SEM_no_tempcorr_df$site_ID <- c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63)
+mecA_site_SEM_no_tempcorr_df$site_mecA_SEM <- c(
+std(meca_copiespm3.ln[Loc_ID==2]),
+std(meca_copiespm3.ln[Loc_ID==3]),
+std(meca_copiespm3.ln[Loc_ID==4]),
+std(meca_copiespm3.ln[Loc_ID==5]),
+std(meca_copiespm3.ln[Loc_ID==6]),
+std(meca_copiespm3.ln[Loc_ID==7]),
+std(meca_copiespm3.ln[Loc_ID==8]),
+std(meca_copiespm3.ln[Loc_ID==9]),
+std(meca_copiespm3.ln[Loc_ID==11]),
+std(meca_copiespm3.ln[Loc_ID==12]),
+std(meca_copiespm3.ln[Loc_ID==13]),
+std(meca_copiespm3.ln[Loc_ID==14]),
+std(meca_copiespm3.ln[Loc_ID==15]),
+std(meca_copiespm3.ln[Loc_ID==16]),
+std(meca_copiespm3.ln[Loc_ID==17]),
+std(meca_copiespm3.ln[Loc_ID==18]),
+std(meca_copiespm3.ln[Loc_ID==19]),
+std(meca_copiespm3.ln[Loc_ID==20]),
+std(meca_copiespm3.ln[Loc_ID==21]),
+std(meca_copiespm3.ln[Loc_ID==22]),
+std(meca_copiespm3.ln[Loc_ID==23]),
+std(meca_copiespm3.ln[Loc_ID==24]),
+std(meca_copiespm3.ln[Loc_ID==25]),
+std(meca_copiespm3.ln[Loc_ID==26]),
+std(meca_copiespm3.ln[Loc_ID==27]),
+std(meca_copiespm3.ln[Loc_ID==28]),
+std(meca_copiespm3.ln[Loc_ID==29]),
+std(meca_copiespm3.ln[Loc_ID==30]),
+std(meca_copiespm3.ln[Loc_ID==31]),
+std(meca_copiespm3.ln[Loc_ID==32]),
+std(meca_copiespm3.ln[Loc_ID==33]),
+std(meca_copiespm3.ln[Loc_ID==34]),
+std(meca_copiespm3.ln[Loc_ID==35]),
+std(meca_copiespm3.ln[Loc_ID==36]),
+std(meca_copiespm3.ln[Loc_ID==37]),
+std(meca_copiespm3.ln[Loc_ID==38]),
+std(meca_copiespm3.ln[Loc_ID==39]),
+std(meca_copiespm3.ln[Loc_ID==40]),
+std(meca_copiespm3.ln[Loc_ID==41]),
+std(meca_copiespm3.ln[Loc_ID==42]),
+std(meca_copiespm3.ln[Loc_ID==43]),
+std(meca_copiespm3.ln[Loc_ID==44]),
+std(meca_copiespm3.ln[Loc_ID==45]),
+std(meca_copiespm3.ln[Loc_ID==46]),
+std(meca_copiespm3.ln[Loc_ID==47]),
+std(meca_copiespm3.ln[Loc_ID==48]),
+std(meca_copiespm3.ln[Loc_ID==49]),
+std(meca_copiespm3.ln[Loc_ID==50]),
+std(meca_copiespm3.ln[Loc_ID==51]),
+std(meca_copiespm3.ln[Loc_ID==52]),
+std(meca_copiespm3.ln[Loc_ID==53]),
+std(meca_copiespm3.ln[Loc_ID==54]),
+std(meca_copiespm3.ln[Loc_ID==55]),
+std(meca_copiespm3.ln[Loc_ID==56]),
+std(meca_copiespm3.ln[Loc_ID==57]),
+std(meca_copiespm3.ln[Loc_ID==58]),
+std(meca_copiespm3.ln[Loc_ID==59]),
+std(meca_copiespm3.ln[Loc_ID==60]),
+std(meca_copiespm3.ln[Loc_ID==61]),
+std(meca_copiespm3.ln[Loc_ID==62]),
+std(meca_copiespm3.ln[Loc_ID==63]))
+
+mecA_site_SEM_no_tempcorr_df
+
+mecA_site_SEM_no_tempcorr_df <- subset(mecA_site_SEM_no_tempcorr_df, select = -c(X1,X2) )
+rownames(mecA_site_SEM_no_tempcorr_df) <- mecA_site_SEM_no_tempcorr_df[,1]
+mecA_site_SEM_no_tempcorr_df <- subset(mecA_site_SEM_no_tempcorr_df, select = -c(site_ID) )
+
+summary(mecA_site_SEM_no_tempcorr_df)
+# create dataframe with these standard errors 
+
+boxplot(mecA_site_SEM_df,
+        ylab = "mecA concentration SEM")
+
+```
