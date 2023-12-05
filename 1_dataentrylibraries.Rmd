@@ -1,0 +1,613 @@
+---
+title: "Exposure Assessment Models for Microbial Emissions from Livestock Farms in the Netherlands: a Comparison of Linear Regression and Random Forest Land Use Models"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+#  Libraries 
+```{r}
+# working directory is set to the parent directory where script is saved
+library(writexl)
+library(doBy) # for summary statistics table
+library(foreign)
+library(nlme)
+library(lattice)
+library(psych) 
+library(ggplot2) #  for creating plots
+library(gclus)
+library(foreign)
+library(gdata)
+library(car) #  calculate VIF
+library(effects)
+library(corrplot)
+library(mgcv)
+library(MASS)
+library(Hmisc)
+library(dplyr)
+library(tidyr)
+library(readr) # for saving objects as csv files
+library(broom) #  for tidying up model output
+library(olsrr) #  for creating Cooks' D bar plot
+library(writexl)#  To save data tables as excel files
+library(caret) #  for random forest models, variable importance plots 
+library(ranger)  #  for random forest models
+library(vip)
+library(cowplot)
+library(reshape2)
+library(reshape)
+```
+#  Read in the measurement data (dependent variable)
+```{r}
+#  The csv file "VGOB1_BioA_SiteAv.csv" contains the annual average concentrations of E.coli, staph, tetW and mecA (ln-transformed) per site (difference method used for temporal adjustment). csv file located in the folder 'Input_files'
+Measurement_data <- read.csv("Input_files/VGOB1_BioA_SiteAv.csv")
+#  Check the names of the columns of data
+names(Measurement_data)
+#  There is an added column 'X' - remove this column so that the first column is now the location ID
+Measurement_data$X <- NULL
+
+# Remove the ln-transform of the concentrations 
+Measurement_data_untrans <- Measurement_data
+Measurement_data_untrans[,2:5] <- apply(Measurement_data_untrans[,2:5], 2, exp)
+
+# Distribution of ln-transformed microbial concentrations
+par(mfrow=c(2,2))
+boxplot(Measurement_data$ecoli_copiespm3.ln.diffmeth.mean, main = "E. coli (ln copies/m^3)")
+boxplot(Measurement_data$staph_copiespm3.ln.diffmeth.mean, main = "Staph spp.(ln copies/m^3)")
+boxplot(Measurement_data$tetw_copiespm3.ln.diffmeth.mean, main = "tetW (ln copies/m^3)")
+boxplot(Measurement_data$meca_copiespm3.ln.diffmeth.mean, main = "mecA (ln copies/m^3)")
+
+par(mfrow=c(2,2))
+hist(Measurement_data$ecoli_copiespm3.ln.diffmeth.mean, main = "E. coli (ln copies/m^3)")
+hist(Measurement_data$staph_copiespm3.ln.diffmeth.mean, main = "Staph spp.(ln copies/m^3)")
+hist(Measurement_data$tetw_copiespm3.ln.diffmeth.mean, main = "tetW (ln copies/m^3)")
+hist(Measurement_data$meca_copiespm3.ln.diffmeth.mean, main = "mecA (ln copies/m^3)")
+
+# Distribution of raw microbial concentrations
+par(mfrow=c(2,2))
+boxplot(Measurement_data_untrans$ecoli_copiespm3.ln.diffmeth.mean, main = "E. coli (copies/m^3)")
+boxplot(Measurement_data_untrans$staph_copiespm3.ln.diffmeth.mean, main = "Staph spp.(copies/m^3)")
+boxplot(Measurement_data_untrans$tetw_copiespm3.ln.diffmeth.mean, main = "tetW (copies/m^3)")
+boxplot(Measurement_data_untrans$meca_copiespm3.ln.diffmeth.mean, main = "mecA (copies/m^3)")
+
+par(mfrow=c(2,2))
+hist(Measurement_data_untrans$ecoli_copiespm3.ln.diffmeth.mean, main = "E. coli (copies/m^3)")
+hist(Measurement_data_untrans$staph_copiespm3.ln.diffmeth.mean, main = "Staph spp.(copies/m^3)")
+hist(Measurement_data_untrans$tetw_copiespm3.ln.diffmeth.mean, main = "tetW (copies/m^3)")
+hist(Measurement_data_untrans$meca_copiespm3.ln.diffmeth.mean, main = "mecA (copies/m^3)")
+
+```
+#  Read in the exposure data (predictor variables)
+```{r}
+#  csv file "VGOB1_ExpoV_Adj_KeptN20_Tr_1P9_new.csv" contains predictor variables (these are all livestock-related characteristics of the surroundings). Each predictor in this csv file has at least 20 non-zero values.These predictors have not been winsorised or scaled. 
+Livestock_predictors_csv <- read.csv("Input_files/VGOB1_ExpoV_Adj_KeptN20.csv")
+names(Livestock_predictors_csv)
+#  There is an added column 'X' - remove this column so that the first column is now the location ID
+Livestock_predictors_csv$X <- NULL
+#  Winsorization and scaling of all the variables needs to be performed 
+#  Some variables have been negated and inversed already, the winsorization needs to be done on the raw variables, so these 16 variables need to be returned to their raw values and then all can be winsorized.
+Livestock_predictors <- Livestock_predictors_csv
+#  Make all 8 negative variables positive again
+Livestock_predictors$MindistPigs15.NEG <- Livestock_predictors$MindistPigs15.NEG *-1 
+Livestock_predictors$MindistPoultry250.NEG <- Livestock_predictors$MindistPoultry250.NEG *-1 
+Livestock_predictors$MindistCows5.NEG <- Livestock_predictors$MindistCows5.NEG *-1 
+Livestock_predictors$MindistHorses5.NEG <- Livestock_predictors$MindistHorses5.NEG * -1 
+Livestock_predictors$MindistGoats50.NEG <- Livestock_predictors$MindistGoats50.NEG *-1 
+Livestock_predictors$MindistSheep50.NEG <- Livestock_predictors$MindistSheep50.NEG *-1 
+Livestock_predictors$MindistFuranims250.NEG <- Livestock_predictors$MindistFuranims250.NEG *-1 
+Livestock_predictors$MinDistAnyFarm.NEG <- Livestock_predictors$MinDistAnyFarm.NEG *-1 
+#  Un-invert the 8 inversed variables 
+Livestock_predictors$MindistPigs15.INV <- 1/(Livestock_predictors$MindistPigs15.INV)
+Livestock_predictors$MindistPoultry250.INV <- 1/(Livestock_predictors$MindistPoultry250.INV)
+Livestock_predictors$MindistCows5.INV <- 1/(Livestock_predictors$MindistCows5.INV)
+Livestock_predictors$MindistHorses5.INV <- 1/(Livestock_predictors$MindistHorses5.INV)
+Livestock_predictors$MindistGoats50.INV <- 1/(Livestock_predictors$MindistGoats50.INV)
+Livestock_predictors$MindistSheep50.INV <- 1/(Livestock_predictors$MindistSheep50.INV)
+Livestock_predictors$MindistFuranims250.INV <- 1/(Livestock_predictors$MindistFuranims250.INV)
+Livestock_predictors$MinDistAnyFarm.INV <- 1/(Livestock_predictors$MinDistAnyFarm.INV)
+
+#### Winsorize to 95th percentile ####
+names(Livestock_predictors)
+Livestock_predictors_winsorizedvalues <- apply(Livestock_predictors[,2:140],2,function(x){pmin(x,quantile(x,0.95,na.rm=TRUE))})
+colnames(Livestock_predictors_winsorizedvalues) <- paste0(colnames(Livestock_predictors[,2:140]),".95Win")
+summary(Livestock_predictors_winsorizedvalues)
+Livestock_predictors_wins <- cbind(Livestock_predictors,Livestock_predictors_winsorizedvalues)
+summary(Livestock_predictors_wins)
+
+#  All negative variables need to be negated again and inversed ones inversed again. Only the winsorized variables will be modified as the non-winsorized ones are no longer required. 
+#  Negate all .NEG (winsorized) predictors again 
+Livestock_predictors_wins$MindistPigs15.NEG.95Win <- Livestock_predictors_wins$MindistPigs15.NEG.95Win * -1 
+Livestock_predictors_wins$MindistPoultry250.NEG.95Win <- Livestock_predictors_wins$MindistPoultry250.NEG.95Win * -1 
+Livestock_predictors_wins$MindistCows5.NEG.95Win <- Livestock_predictors_wins$MindistCows5.NEG.95Win * -1 
+Livestock_predictors_wins$MindistHorses5.NEG.95Win <- Livestock_predictors_wins$MindistHorses5.NEG.95Win* -1 
+Livestock_predictors_wins$MindistGoats50.NEG.95Win <- Livestock_predictors_wins$MindistGoats50.NEG.95Win * -1 
+Livestock_predictors_wins$MindistSheep50.NEG.95Win <- Livestock_predictors_wins$MindistSheep50.NEG.95Win * -1 
+Livestock_predictors_wins$MindistFuranims250.NEG.95Win <- Livestock_predictors_wins$MindistFuranims250.NEG.95Win * -1
+Livestock_predictors_wins$MinDistAnyFarm.NEG.95Win<- Livestock_predictors_wins$MinDistAnyFarm.NEG.95Win * -1 
+
+#  Inverse the .INV (winsorized) predictors again
+Livestock_predictors_wins$MindistPigs15.INV.95Win <- 1/(Livestock_predictors_wins$MindistPigs15.INV.95Win)
+Livestock_predictors_wins$MindistPoultry250.INV.95Win <- 1/(Livestock_predictors_wins$MindistPoultry250.INV.95Win)
+Livestock_predictors_wins$MindistCows5.INV.95Win <- 1/(Livestock_predictors_wins$MindistCows5.INV.95Win)
+Livestock_predictors_wins$MindistHorses5.INV.95Win <- 1/(Livestock_predictors_wins$MindistHorses5.INV.95Win)
+Livestock_predictors_wins$MindistGoats50.INV.95Win<- 1/(Livestock_predictors_wins$MindistGoats50.INV.95Win)
+Livestock_predictors_wins$MindistSheep50.INV.95Win <- 1/(Livestock_predictors_wins$MindistSheep50.INV.95Win)
+Livestock_predictors_wins$MindistFuranims250.INV.95Win <- 1/(Livestock_predictors_wins$MindistFuranims250.INV.95Win)
+Livestock_predictors_wins$MinDistAnyFarm.INV.95Win <- 1/(Livestock_predictors_wins$MinDistAnyFarm.INV.95Win)
+
+# Inspect the new df 
+Livestock_predictors_wins
+# we only want the winsorized values from this dataframe
+Livestock_predictors_wins_only <- subset(Livestock_predictors_wins[c(1,141:279)])
+names(Livestock_predictors_wins_only)
+
+#  Following meeting on 28/10/2021, all fur animal predictors will be removed from the list of predictor variables for two main reasons: There are very few sites in close proximity to fur animal farms (this variable wasn't taken into account when selecting sites). Past research (see paper https://www.nivel.nl/nl/publicatie/mogelijke-effecten-van-intensieve-veehouderij-op-de-gezondheid-van-omwonenden-onderzoek) suggests that mink farms do not contribute to livestock-related pollution
+names(Livestock_predictors_wins_only)
+Livestock_predictors_wins_only_nofur <- subset(Livestock_predictors_wins_only, select = -c(MindistFuranims250.NEG.95Win,MindistFuranims250.INV.95Win, nfuranims.3000m.95Win, FuranimFarm.3000m.95Win, nfuranimsWghtDist.3000m.sum.95Win, nFuranimFarmWghtDist.3000m.sum.95Win))
+names(Livestock_predictors_wins_only_nofur)
+#  6 fur animal variables have now been removed from the dataframe - now we have 133 predictors instead of 139 as before with the fur animal variables. 
+
+#### Scale to 10th-90th percentile ####
+#  Now scale the variables to 10-90th percentile
+Livestock_predictors_wins_10to90scaled <- Livestock_predictors_wins_only_nofur
+names(Livestock_predictors_wins_10to90scaled)
+names2 <- colnames(Livestock_predictors_wins_10to90scaled)[2:134] #  these are the names of the winsorized variables 
+Livestock_predictors_wins_10to90scaled[,paste0(names2, ".10to90scaled")] <- apply(Livestock_predictors_wins_10to90scaled[,names2], MARGIN=2, function(x){x/(quantile(x,0.90,na.rm=TRUE)-quantile(x,0.10,na.rm=TRUE))})
+
+#  Inspect the new df - now remove the winsorized only values, and only keep those which are both winsorized and scaled (there are 133 values that have only been winsorized and 133 that are both winsorized and scaled)
+names(Livestock_predictors_wins_10to90scaled)
+Livestock_predictors_final <- subset(Livestock_predictors_wins_10to90scaled[c(1,135:267)])
+names(Livestock_predictors_final)
+# This dataset only contains exposure variables which are both winsorized and scaled, and also a Loc_ID column (location identifier)
+```
+#  Merge measurement data and predictor variables
+```{r}
+# Ln-transformed concentrations
+#  Merge microbial measurement file with the predictor variable file
+Measurements_livestockpreds <- merge(Measurement_data, Livestock_predictors_final, by="Loc_ID", all=TRUE)
+# check the structure of the data - all should be numeric (except loc_ID (integer)) 
+str(Measurements_livestockpreds, list.len=ncol(Measurements_livestockpreds)) 
+#  Save the R dataframe as an excel file
+write_xlsx(Measurements_livestockpreds,"Output_files/Measurements_livestockpredictors.xlsx")
+
+# Raw concentrations
+#  Merge microbial measurement file with the predictor variable file
+Measurementsraw_livestockpreds <- merge(Measurement_data_untrans, Livestock_predictors_final, by="Loc_ID", all=TRUE)
+# check the structure of the data - all should be numeric (except loc_ID (integer)) 
+str(Measurementsraw_livestockpreds, list.len=ncol(Measurementsraw_livestockpreds)) 
+#  Save the R dataframe as an excel file
+write_xlsx(Measurements_livestockpreds,"Output_files/Measurementsraw_livestockpredictors.xlsx")
+```
+# Summary table of livestock characteristics
+```{r}
+
+GIS_variables_summary <- data.frame(
+  mean = apply(Livestock_predictors_csv, 2, mean),
+  sd = apply(Livestock_predictors_csv, 2, sd),
+  median = apply(Livestock_predictors_csv, 2, median),
+  percentile_10 = apply(Livestock_predictors_csv, 2, quantile, probs = 0.1),
+  percentile_90 = apply(Livestock_predictors_csv, 2, quantile, probs = 0.9),
+  min = apply(Livestock_predictors_csv, 2, min),
+  max = apply(Livestock_predictors_csv, 2, max)
+)
+
+
+write.xlsx(GIS_variables_summary, file = "Output_files/GIS_variables_summary_table.xlsx", rowNames = TRUE)
+
+```
+
+#  Initial data explorations - ln transformed concentrations
+```{r}
+# ln-transformed concentrations
+#  Calculate mean, median and sd for each microbial marker
+ecoli_mean <- mean(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean)
+staph_mean<- mean(Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean)
+tetw_mean <- mean(Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean)
+mecA_mean <- mean(Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean)
+
+ecoli_median <- median(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean)
+staph_median <- median(Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean)
+tetw_median <- median(Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean)
+meca_median <- median(Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean)
+
+ecoli_sd <- sd(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean)
+staph_sd <- sd(Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean)
+tetw_sd <- sd(Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean)
+meca_sd <- sd(Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean)
+
+#  Print results 
+ecoli_mean
+staph_mean
+tetw_mean
+mecA_mean
+ecoli_median
+staph_median
+tetw_median
+meca_median
+ecoli_sd
+staph_sd
+tetw_sd
+meca_sd
+
+#  Check normality of distributions of the (ln-transformed) microbial pollutants 
+#  These graphs only work if I change chunk output to being in the console rather than inline - change in the settings section wheel next to the 'preview'dropdown menu
+#  Check normality of distributions of ecoli, staph, mecA and tetW
+{par(mfrow = c(2, 2))
+hist(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean,  main="Annual average E.coli concentrations per site", xlab="E.coli concentration (ln-transformed) and temporally adjusted", ylab="Number of sites")
+hist(Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean, main="Annual average Staph concentrations per site", xlab="Staph concentration (ln-transformed) and temporally adjusted", ylab="Number of sites")
+hist(Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean, main="Annual average tetW concentrations per site", xlab="tetW concentration (ln-transformed) and temporally adjusted", ylab="Number of sites")
+hist(Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean, main="Annual average mecA concentrations per site", xlab="mecA concentration (ln-transformed) and temporally adjusted", ylab="Number of sites")}
+
+#  Calculate coefficient of variation for each variable - these are called 'coefficient of Variation in Natural Logarithm (CVnL).'
+CVnL.ecoli <- sd(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean) / mean(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean) * 100
+CVnL.staph <- sd(Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean) / mean(Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean) * 100
+CVnL.tetW <- sd(Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean) / mean(Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean) * 100
+CVnL.mecA <- sd(Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean) / mean(Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean) * 100
+CVnL.ecoli
+CVnL.staph
+CVnL.tetW
+CVnL.mecA
+
+#  Now create boxplot with colour and add CVnL values as labels to the plot 
+colours <- c(rep("blue",1), rep("red",1), rep("green",1),rep("orange",1))
+dev.off() 
+{boxplot(Measurements_livestockpreds$ecoli_copiespm3.ln.diffmeth.mean,Measurements_livestockpreds$staph_copiespm3.ln.diffmeth.mean, Measurements_livestockpreds$tetw_copiespm3.ln.diffmeth.mean, Measurements_livestockpreds$meca_copiespm3.ln.diffmeth.mean, main = "Ambient air concentrations of the four microbial pollutants", xlab = "Microbial pollutant", ylab = "Concentration (ln copies per m^3)", col = c("deepskyblue2", "brown2", "darkgoldenrod2", "forestgreen"), ylim = c(0,13))
+text(x= 1, y= 6, labels= "CVnL = 18.6")
+text(x= 2, y= 11, labels= "CVnL = 15.2")
+text(x= 3, y= 13, labels= "CVnL = 7.5")
+text(x= 4, y= 6, labels= "CVnL = 34.2")}
+
+#  Make a ggplot2 version of this boxplot
+#  Firstly I need to reshape the data 
+meas_data_reshape <- melt(Measurements_livestockpreds,id.vars='Loc_ID', measure.vars=c('ecoli_copiespm3.ln.diffmeth.mean','staph_copiespm3.ln.diffmeth.mean','tetw_copiespm3.ln.diffmeth.mean', 'meca_copiespm3.ln.diffmeth.mean'))
+
+meas_data_reshape$variable_labels <- factor(meas_data_reshape$variable, levels = c("ecoli_copiespm3.ln.diffmeth.mean", "staph_copiespm3.ln.diffmeth.mean", "tetw_copiespm3.ln.diffmeth.mean", "meca_copiespm3.ln.diffmeth.mean"), labels = c("E. coli", "Staphylococcus spp.", "tetW", "mecA"))
+
+ggplot(meas_data_reshape) +
+  geom_boxplot(aes(x = variable_labels, y = value, fill = variable)) +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  labs(x = "Microbial agent", y = "DNA concentration (ln copies/m3")+ 
+  scale_fill_discrete()+
+  theme(legend.position = "none", axis.text = element_text(size = 12), axis.title = element_text(size=14))
+
+# Figure for manuscript
+# Create figure with ln-transformed values on the left y-axis and absolute on the right y-axis
+library(dplyr)
+
+label_text <- c("CVnL = 18.6", "CVnL = 15.2", "CVnL = 7.5", "CVnL = 34.2")
+
+label_data <- meas_data_reshape %>%
+  group_by(variable_labels) %>%
+  summarize(max_value = max(value)) %>%
+  mutate(label_text = rep(label_text, length.out = n()))
+
+ggplot(meas_data_reshape) +
+  geom_boxplot(aes(x = variable_labels, y = value, fill = variable)) +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  geom_text(data = label_data, aes(x = variable_labels, y = 1.05 * max_value, label = label_text),
+            vjust = 0, size = 4) +
+  labs(x = "Microbial agent", y = "DNA concentration (ln copies/m3)") +
+  scale_fill_discrete() +
+  scale_y_continuous(breaks = seq(1, 14, by = 2), limits = c(0, 13))+
+  theme(legend.position = "none", axis.text = element_text(size = 12), axis.title = element_text(size = 14))
+
+
+# Add secondary y-axis with absolute concentrations (rounded values)
+# Define the inverse transformation function
+inv_transform <- function(x) {
+  exp(x)
+}
+# Plot with the secondary y-axis aligned with the original values
+ggplot(meas_data_reshape) +
+  geom_boxplot(aes(x = variable_labels, y = value, fill = variable)) +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  geom_text(data = label_data, aes(x = variable_labels, y = 1.05 * max_value, label = label_text),
+            vjust = 0, size = 4) +
+  labs(x = "Microbial agent", y = "DNA concentration (ln copies/m3)") +
+  scale_fill_discrete() +
+  scale_y_continuous(breaks = seq(0, 13, by = 2), limits = c(0, 13),
+                     sec.axis = sec_axis(trans = ~ inv_transform(.), 
+                                         breaks = exp(seq(0, 13, by = 2)), 
+                                         labels = round(exp(seq(0, 13, by = 2))),
+                                         name = "Absolute DNA concentration (copies/m3)")) +
+  theme(legend.position = "none", axis.text = element_text(size = 12), axis.title = element_text(size = 14))
+
+# Save the plot as a high-quality TIFF file
+tiff("Output_files//boxplot_grey_size.tif", width = 6, height = 4, units = "in", res = 2000)
+print(last_plot())
+dev.off()
+
+
+# Italicise the axis labels and change size of axis titles
+plot <- ggplot(meas_data_reshape) +
+  geom_boxplot(aes(x = variable_labels, y = value, fill = variable)) +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  geom_text(data = label_data, aes(x = variable_labels, y = 1.05 * max_value, label = label_text),
+            vjust = 0, size = 3) +
+  labs(x = "Microbial agent", y = "DNA concentration (ln copies/m^3)") +
+  scale_fill_discrete() +
+  scale_y_continuous(breaks = seq(0, 13, by = 2), limits = c(0, 13),
+                     sec.axis = sec_axis(trans = ~ inv_transform(.), 
+                                         breaks = exp(seq(0, 13, by = 2)), 
+                                         labels = round(exp(seq(0, 13, by = 2))),
+                                         name = "Absolute DNA concentration (copies/m^3)")) +
+  theme(legend.position = "none", axis.text = element_text(size = 11), axis.title = element_text(size = 11))
+
+# Manually italicize specific labels
+plot <- plot + theme(axis.text.x = element_text(size = 11))
+plot + scale_x_discrete(labels = c(expression(italic("E. coli")),
+                                    expression(italic("Staphylococcus")~ "spp."),
+                                    expression(italic("tet") ~ "W"),
+                                    expression(italic("mec") ~ "A")))
+
+
+tiff("Output_files//boxplot_grey_italic.tif", width = 6, height = 4, units = "in", res = 300)
+print(last_plot())
+dev.off()
+
+
+
+
+# # redo with white background
+# ggplot(meas_data_reshape) +
+#   geom_boxplot(aes(x = variable_labels, y = value, fill = variable)) +
+#   scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+#   geom_text(data = label_data, aes(x = variable_labels, y = 1.05 * max_value, label = label_text),
+#             vjust = 0, size = 4) +
+#   labs(x = "Microbial agent", y = "DNA concentration (ln copies/m3)") +
+#   scale_fill_discrete() +
+#   scale_y_continuous(breaks = seq(0, 13, by = 2), limits = c(0, 13),
+#                      sec.axis = sec_axis(trans = ~ inv_transform(.), 
+#                                          breaks = exp(seq(0, 13, by = 2)), 
+#                                          labels = round(exp(seq(0, 13, by = 2))),
+#                                          name = "Absolute DNA concentration (copies/m3)")) +
+#   theme(legend.position = "none",
+#         axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 14),
+#         panel.background = element_blank(),  # Remove the grey panel background
+#         panel.grid.major = element_blank(),  # Remove major grid lines
+#         panel.grid.minor = element_blank()   # Remove minor grid lines
+#         )
+# 
+# # Save the plot as a high-quality TIFF file
+# tiff("Output_files//boxplot_white.tif", width = 6, height = 4, units = "in", res = 2000)
+# print(last_plot())
+# dev.off()
+
+
+
+
+
+
+```
+#  Initial data explorations - absolute concentrations
+```{r}
+#  Calculate geometric statistics 
+#  To calculate the geometric mean of ln-transformed values, I first need to apply the exponential function (exp) to the arithmetic mean of the ln-transformed values. This is because the natural logarithm (ln) is the inverse function of the exponential function (exp), and the geometric mean of a set of numbers is the nth root of the product of the numbers. The same applies for the Geometric standard deviation. 
+ecoli_GM <- exp(ecoli_mean)
+staph_GM <- exp(staph_mean)
+tetw_GM <- exp(tetw_mean)
+meca_GM <- exp(mecA_mean)
+ecoli_GSD <- exp(ecoli_sd)
+staph_GSD <- exp(staph_sd)
+tetw_GSD <- exp(tetw_sd)
+meca_GSD <- exp(meca_sd)
+#  Print the results
+ecoli_GM
+staph_GM
+tetw_GM
+meca_GM
+ecoli_GSD
+staph_GSD
+tetw_GSD
+meca_GSD
+
+# Compute Coefficient of variation of the geometric mean of the absolute concentrations
+# TBC
+
+#  Following conversations with MdR and lAMS on 16/01/23 decided it would be useful to also show absolute concentrations on a plot instead of the ln-transformed values.
+#  Absolute concentrations can be obtained by exponentiating the site averages. 
+#  LAMS suggested to present the absolute concentrations on a log10 scale. 
+#  Firstly I need to exponentiate the ln-transformed values and add this as a column to the (reshaped) dataframe (meas_data_reshape)
+SiteAv_actual <- meas_data_reshape
+SiteAv_actual['actual_value'] <- exp(SiteAv_actual['value']) #  exponentiate the concentrations to obtain the actual concentrations of the microbial agents
+SiteAv_actual <- SiteAv_actual[-3] #  remove the ln-transformed concentrations from the df 
+
+#  Compute the COV for the absolute concentrations of each microbial agent- the CV of ln-transformed data will be different from the CV of the original data, and the CV of ln-transformed data will be lower than the CV of the original data, that is because of the way ln-transformation compresses the data in the tails, reducing the impact of outliers and making the data more symmetric.
+ecoli_abs <- exp(Measurement_data$ecoli_copiespm3.ln.diffmeth.mean)
+staph_abs <- exp(Measurement_data$staph_copiespm3.ln.diffmeth.mean)
+tetW_abs <- exp(Measurement_data$tetw_copiespm3.ln.diffmeth.mean)
+mecA_abs <- exp(Measurement_data$meca_copiespm3.ln.diffmeth.mean)
+
+cov.ecoli_abs <- sd(ecoli_abs)/ mean(ecoli_abs) * 100
+cov.staph_abs <- sd(staph_abs)/ mean(staph_abs) * 100
+cov.tetW_abs <- sd(tetW_abs)/ mean(tetW_abs) * 100
+cov.mecA_abs <- sd(mecA_abs)/ mean(mecA_abs) * 100
+cov.ecoli_abs
+cov.staph_abs
+cov.tetW_abs
+cov.mecA_abs
+
+#  Redo the plot with these actual microbial concentrations
+ggplot(SiteAv_actual) +
+  geom_boxplot(aes(x = variable_labels, y = actual_value, color = variable)) +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  labs(x = "Microbial agent", y = "DNA concentration (copies/m3)")+ 
+  theme(legend.position = "none")
+
+ggplot(SiteAv_actual) +
+  geom_boxplot(aes(x = variable_labels, y = actual_value, fill = variable)) +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  labs(x = "Microbial agent", y = "DNA concentration (copies/m3)")+
+  scale_fill_discrete()+
+  scale_y_continuous(breaks = label_number(big.mark = ",", accuracy = 1), 
+                     labels = label_number(big.mark = ",", accuracy = 1))+
+  theme(legend.position = "none")+
+  theme(legend.position = "none", axis.text = element_text(size = 12), axis.title = element_text(size=14))
+
+str(SiteAv_actual)
+
+#  Using this scale, we cannot properly observe the variation in the markers, LAMS suggested to plot on a log10 y-axis scale 
+#  Now I change the y-axis scale to a log10 scale 
+#  scale_y_log10() changes the scale of the y-axis in the plot to a logarithmic scale with base 10. The values on the y-axis will be displayed in powers of 10 (this is useful when the data on the y-axis spans several orders of magnitude and the differences between the smaller values are difficult to discern on a linear scale). 
+ggplot(meas_data_reshape) +
+  geom_boxplot(aes(x = variable_labels, y = value, fill = variable_labels)) +
+  scale_y_log10() +
+  scale_color_discrete(name = "Variable", labels = c("E.coli", "Staphylococcus", "tetW", "mecA")) +
+  labs(x = "Microbial agent", y = "DNA concentraion (copies/m3)") +
+  scale_fill_discrete()+
+  theme(legend.position = "none", axis.text = element_text(size = 12), axis.title = element_text(size=14))
+```
+#  Define the dependent variables for the LUR and RF models
+```{r}
+# Dependent variables are the microbial concentrations 
+# We will experiment with using ln-transformed concentrations and raw concentrations
+# Ln-transformed concentrations
+ecoli <- Measurement_data$ecoli_copiespm3.ln.diffmeth.mean
+staph <- Measurement_data$staph_copiespm3.ln.diffmeth.mean
+tetW <- Measurement_data$tetw_copiespm3.ln.diffmeth.mean
+mecA <- Measurement_data$meca_copiespm3.ln.diffmeth.mean
+
+ecoli_untrans <- Measurement_data_untrans$ecoli_copiespm3.ln.diffmeth.mean
+staph_untrans <- Measurement_data_untrans$staph_copiespm3.ln.diffmeth.mean
+tetW_untrans <- Measurement_data_untrans$tetw_copiespm3.ln.diffmeth.mean
+mecA_untrans <- Measurement_data_untrans$meca_copiespm3.ln.diffmeth.mean
+```
+
+#  Define the inputs for the LUR models
+```{r}
+#  We have 3 types of LUR model which include increasingly detailed livestock-related predictors: 
+#  LUR1 includes only general livestock-related GIS predictors 
+#  There are 8 general livestock variables
+#  Extract the column numbers which correspond to the above predictor variables required for the model
+which(names(Measurements_livestockpreds)%in%c("MinDistAnyFarm.NEG.95Win.10to90scaled", "MinDistAnyFarm.INV.95Win.10to90scaled", "AllFarm.250m.95Win.10to90scaled", "AllFarm.500m.95Win.10to90scaled", "AllFarm.1000m.95Win.10to90scaled", "AllFarm.3000m.95Win.10to90scaled","nAnyFarmWghtDist.1000m.sum.95Win.10to90scaled", "nAnyFarmWghtDist.3000m.sum.95Win.10to90scaled" ))
+#  Columns: 12,19,35,36,37,38,63,68
+Measurements_livestockpreds_LUR1 <- subset(Measurements_livestockpreds[c(1,2,3,4,5,12,19,35,36,37,38,63,68)]) #  first 5 columns i.e. site IDs and all measurement values, and also columns 12,19,35,36,37,38,63,68
+names(Measurements_livestockpreds_LUR1) 
+
+write.csv(Measurements_livestockpreds_LUR1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_LUR1.csv", row.names = FALSE)
+
+#  LUR2 includes species-specific and general livestock-related predictors 
+#  Extract the column numbers which correspond to the required predictor variables for the model
+which(names(Measurements_livestockpreds)%in%c('MindistPigs15.NEG.95Win.10to90scaled','MindistPoultry250.NEG.95Win.10to90scaled','MindistCows5.NEG.95Win.10to90scaled','MindistHorses5.NEG.95Win.10to90scaled','MindistGoats50.NEG.95Win.10to90scaled','MindistSheep50.NEG.95Win.10to90scaled','MinDistAnyFarm.NEG.95Win.10to90scaled','MindistPigs15.INV.95Win.10to90scaled','MindistPoultry250.INV.95Win.10to90scaled','MindistCows5.INV.95Win.10to90scaled','MindistHorses5.INV.95Win.10to90scaled','MindistGoats50.INV.95Win.10to90scaled','MindistSheep50.INV.95Win.10to90scaled','MinDistAnyFarm.INV.95Win.10to90scaled','npigs.500m.95Win.10to90scaled','npoultry.500m.95Win.10to90scaled','ncows.500m.95Win.10to90scaled','nhorses.500m.95Win.10to90scaled','npigs.1000m.95Win.10to90scaled','npoultry.1000m.95Win.10to90scaled','ncows.1000m.95Win.10to90scaled','nhorses.1000m.95Win.10to90scaled','nsheep.1000m.95Win.10to90scaled','npigs.3000m.95Win.10to90scaled','npoultry.3000m.95Win.10to90scaled','ncows.3000m.95Win.10to90scaled','nhorses.3000m.95Win.10to90scaled','ngoats.3000m.95Win.10to90scaled','nsheep.3000m.95Win.10to90scaled','AllFarm.250m.95Win.10to90scaled','AllFarm.500m.95Win.10to90scaled','AllFarm.1000m.95Win.10to90scaled','AllFarm.3000m.95Win.10to90scaled','PigFarm.500m.95Win.10to90scaled','PoultryFarm.500m.95Win.10to90scaled','CattleFarm.500m.95Win.10to90scaled','PigFarm.1000m.95Win.10to90scaled','PoultryFarm.1000m.95Win.10to90scaled','CattleFarm.1000m.95Win.10to90scaled','HorseFarm.1000m.95Win.10to90scaled','PigFarm.3000m.95Win.10to90scaled','PoultryFarm.3000m.95Win.10to90scaled','CattleFarm.3000m.95Win.10to90scaled','HorseFarm.3000m.95Win.10to90scaled','GoatFarm.3000m.95Win.10to90scaled','SheepFarm.3000m.95Win.10to90scaled','npigsWghtDist.1000m.sum.95Win.10to90scaled','npoultryWghtDist.1000m.sum.95Win.10to90scaled','ncowsWghtDist.1000m.sum.95Win.10to90scaled','nhorsesWghtDist.1000m.sum.95Win.10to90scaled','nsheepWghtDist.1000m.sum.95Win.10to90scaled','npigsWghtDist.3000m.sum.95Win.10to90scaled','npoultryWghtDist.3000m.sum.95Win.10to90scaled','ncowsWghtDist.3000m.sum.95Win.10to90scaled','nhorsesWghtDist.3000m.sum.95Win.10to90scaled','ngoatsWghtDist.3000m.sum.95Win.10to90scaled','nsheepWghtDist.3000m.sum.95Win.10to90scaled','nAnyFarmWghtDist.1000m.sum.95Win.10to90scaled','nPigFarmWghtDist.1000m.sum.95Win.10to90scaled','nPoultryFarmWghtDist.1000m.sum.95Win.10to90scaled','nCattleFarmWghtDist.1000m.sum.95Win.10to90scaled','nHorseFarmWghtDist.1000m.sum.95Win.10to90scaled','nAnyFarmWghtDist.3000m.sum.95Win.10to90scaled','nPigFarmWghtDist.3000m.sum.95Win.10to90scaled','nPoultryFarmWghtDist.3000m.sum.95Win.10to90scaled','nCattleFarmWghtDist.3000m.sum.95Win.10to90scaled','nHorseFarmWghtDist.3000m.sum.95Win.10to90scaled','nGoatFarmWghtDist.3000m.sum.95Win.10to90scaled','nSheepFarmWghtDist.3000m.sum.95Win.10to90scaled'))
+#  Columns: 6-74 should be used for this model
+Measurements_livestockpreds_LUR2 <- subset(Measurements_livestockpreds[1:74]) #  first 74 columns i.e. site IDs and all measurement values, and also columns 6-74
+names(Measurements_livestockpreds_LUR2) 
+write.csv(Measurements_livestockpreds_LUR2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_LUR2.csv", row.names = FALSE)
+
+#  LUR 3 includes farm type-specific, species-specific and general livestock-related predictors 
+#  Predictor variables 6-144 should be included in the model 
+Measurements_livestockpreds_LUR3 <- subset(Measurements_livestockpreds[1:138]) #  all columns i.e. site IDs and all measurement values, and also columns 6-80
+names(Measurements_livestockpreds_LUR3) 
+write.csv(Measurements_livestockpreds_LUR3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_LUR3.csv",row.names = FALSE)
+
+
+# Now create these data frames but with the raw concentrations rather than ln-transformed concentrations 
+# Now I want to reverse the ln-transformation of the microbial concentrations (columns 2-5)
+Measurements_untrans_livestockpreds_LUR1 <- Measurements_livestockpreds_LUR1
+Measurements_untrans_livestockpreds_LUR1[,2:5] <- apply(Measurements_untrans_livestockpreds_LUR1[,2:5], 2, exp) #  The 2 argument in apply() indicates that the function should be applied to each column, and the exp argument specifies the function to apply. The resulting exponentiated values are then assigned back to columns 2-5 of Measurements_untrans_livestockpreds_LUR2
+write.csv(Measurements_untrans_livestockpreds_LUR1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_LUR1.csv",row.names = FALSE)
+
+Measurements_untrans_livestockpreds_LUR2 <- Measurements_livestockpreds_LUR2
+Measurements_untrans_livestockpreds_LUR2[,2:5] <- apply(Measurements_untrans_livestockpreds_LUR2[,2:5], 2, exp)
+write.csv(Measurements_untrans_livestockpreds_LUR2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_LUR2.csv", row.names = FALSE)
+
+Measurements_untrans_livestockpreds_LUR3 <- Measurements_livestockpreds_LUR3
+Measurements_untrans_livestockpreds_LUR3[,2:5] <- apply(Measurements_untrans_livestockpreds_LUR3[,2:5], 2, exp)
+write.csv(Measurements_untrans_livestockpreds_LUR3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_LUR3.csv",row.names = FALSE)
+```
+#  Define the inputs for the Random Forest models
+```{r}
+# For the Random Forest models, the data used as input should include only the concentrations of the microbe of interest in addition with the predictor variables for each of the 3 levels. The above dataframes need to be amended so that only the microbe of interest is in the dataframe. 
+# With the ln-transformed microbial concentrations
+# E.coli 
+# Level 1 
+Measurements_livestockpreds_ecoliRF1 <- subset(Measurements_livestockpreds_LUR1[c(2,6:13)])
+write.csv(Measurements_livestockpreds_ecoliRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_ecoliRF1.csv",row.names = FALSE)
+# Level 2 
+Measurements_livestockpreds_ecoliRF2 <- subset(Measurements_livestockpreds_LUR2[c(2,6:74)])
+write.csv(Measurements_livestockpreds_ecoliRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_ecoliRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_livestockpreds_ecoliRF3 <- subset(Measurements_livestockpreds_LUR3[c(2,6:138)])
+write.csv(Measurements_livestockpreds_ecoliRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_ecoliRF3.csv",row.names = FALSE)
+
+# Staph 
+# Level 1 
+Measurements_livestockpreds_staphRF1 <- subset(Measurements_livestockpreds_LUR1[c(3,6:13)])
+write.csv(Measurements_livestockpreds_staphRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_staphRF1.csv",row.names = FALSE)
+# Level 2
+Measurements_livestockpreds_staphRF2 <- subset(Measurements_livestockpreds_LUR2[c(3,6:74)])
+write.csv(Measurements_livestockpreds_staphRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_staphRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_livestockpreds_staphRF3 <- subset(Measurements_livestockpreds_LUR3[c(3,6:138)])
+write.csv(Measurements_livestockpreds_staphRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_staphRF3.csv",row.names = FALSE)
+
+# tetW 
+# Level 1 
+Measurements_livestockpreds_tetwRF1 <- subset(Measurements_livestockpreds_LUR1[c(4,6:13)])
+write.csv(Measurements_livestockpreds_tetwRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_tetwRF1.csv",row.names = FALSE)
+# Level 2 
+Measurements_livestockpreds_tetwRF2 <- subset(Measurements_livestockpreds_LUR2[c(4,6:74)])
+write.csv(Measurements_livestockpreds_tetwRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_tetwRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_livestockpreds_tetwRF3 <- subset(Measurements_livestockpreds_LUR3[c(4,6:138)])
+write.csv(Measurements_livestockpreds_tetwRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_tetwRF3.csv",row.names = FALSE)
+
+# mecA 
+# Level 1 
+Measurements_livestockpreds_mecaRF1 <- subset(Measurements_livestockpreds_LUR1[c(5,6:13)])
+write.csv(Measurements_livestockpreds_mecaRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_mecaRF1.csv",row.names = FALSE)
+# Level 2
+Measurements_livestockpreds_mecaRF2 <- subset(Measurements_livestockpreds_LUR2[c(5,6:74)])
+write.csv(Measurements_livestockpreds_mecaRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_mecaRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_livestockpreds_mecaRF3 <- subset(Measurements_livestockpreds_LUR3[c(5,6:138)])
+write.csv(Measurements_livestockpreds_mecaRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_livestockpreds_mecaRF3.csv",row.names = FALSE)
+
+# Now create these data frames but with the raw concentrations rather than ln-transformed concentrations 
+# Now I want to reverse the ln-transformation of the microbial concentrations (columns 2-5)
+# E.coli 
+# Level 1 
+Measurements_untrans_livestockpreds_ecoliRF1 <- subset(Measurements_untrans_livestockpreds_LUR1[c(2,6:13)])
+write.csv(Measurements_untrans_livestockpreds_ecoliRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_ecoliRF1.csv",row.names = FALSE)
+# Level 2 
+Measurements_untrans_livestockpreds_ecoliRF2 <- subset(Measurements_untrans_livestockpreds_LUR2[c(2,6:74)])
+write.csv(Measurements_untrans_livestockpreds_ecoliRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_ecoliRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_untrans_livestockpreds_ecoliRF3 <- subset(Measurements_untrans_livestockpreds_LUR3[c(2,6:138)])
+write.csv(Measurements_untrans_livestockpreds_ecoliRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_ecoliRF3.csv",row.names = FALSE)
+
+# Staph 
+# Level 1 
+Measurements_untrans_livestockpreds_staphRF1 <- subset(Measurements_untrans_livestockpreds_LUR1[c(3,6:13)])
+write.csv(Measurements_untrans_livestockpreds_staphRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_staphRF1.csv",row.names = FALSE)
+# Level 2
+Measurements_untrans_livestockpreds_staphRF2 <- subset(Measurements_untrans_livestockpreds_LUR2[c(3,6:74)])
+write.csv(Measurements_untrans_livestockpreds_staphRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_staphRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_untrans_livestockpreds_staphRF3 <- subset(Measurements_untrans_livestockpreds_LUR3[c(3,6:138)])
+write.csv(Measurements_untrans_livestockpreds_staphRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_staphRF3.csv",row.names = FALSE)
+
+# tetW 
+# Level 1 
+Measurements_untrans_livestockpreds_tetwRF1 <- subset(Measurements_untrans_livestockpreds_LUR1[c(4,6:13)])
+write.csv(Measurements_untrans_livestockpreds_tetwRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_tetwRF1.csv",row.names = FALSE)
+# Level 2 
+Measurements_untrans_livestockpreds_tetwRF2 <- subset(Measurements_untrans_livestockpreds_LUR2[c(4,6:74)])
+write.csv(Measurements_untrans_livestockpreds_tetwRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_tetwRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_untrans_livestockpreds_tetwRF3 <- subset(Measurements_untrans_livestockpreds_LUR3[c(4,6:138)])
+write.csv(Measurements_untrans_livestockpreds_tetwRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_tetwRF3.csv",row.names = FALSE)
+
+# mecA 
+# Level 1 
+Measurements_untrans_livestockpreds_mecaRF1 <- subset(Measurements_untrans_livestockpreds_LUR1[c(5,6:13)])
+write.csv(Measurements_untrans_livestockpreds_mecaRF1,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_mecaRF1.csv",row.names = FALSE)
+# Level 2
+Measurements_untrans_livestockpreds_mecaRF2 <- subset(Measurements_untrans_livestockpreds_LUR2[c(5,6:74)])
+write.csv(Measurements_untrans_livestockpreds_mecaRF2,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_mecaRF2.csv",row.names = FALSE)
+# Level 3
+Measurements_untrans_livestockpreds_mecaRF3 <- subset(Measurements_untrans_livestockpreds_LUR3[c(5,6:138)])
+write.csv(Measurements_untrans_livestockpreds_mecaRF3,"C:\\Users\\Cornu003\\OneDrive - Universiteit Utrecht\\Documents\\Epidemiology MSc 2020\\Research Project\\LUR models\\Exposure_modelling_R_BCH\\Input_files\\Measurements_untrans_livestockpreds_mecaRF3.csv",row.names = FALSE)
+```
+
